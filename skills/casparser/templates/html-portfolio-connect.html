@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--
+  CAS Parser — Portfolio Connect Widget (Vanilla HTML/JS)
+
+  Embeddable widget that handles CAS upload, password entry,
+  Gmail import, and CDSL fetch in a single modal.
+
+  IMPORTANT: In production, generate the access token from your backend.
+  This example uses a hardcoded token for demonstration only.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAS Parser — Portfolio Connect Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f9fafb;
+    }
+    h1 { color: #111827; }
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    .result h3 { margin-top: 0; }
+    pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    #error { color: #dc2626; margin-top: 16px; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Portfolio Connect Demo</h1>
+  <p>Click the button below to import your CAS statement.</p>
+
+  <button class="btn" id="openBtn">Import Portfolio Statement</button>
+  <div id="error"></div>
+  <div id="result" style="display: none;" class="result"></div>
+
+  <!-- Portfolio Connect SDK -->
+  <script src="https://unpkg.com/@cas-parser/connect@latest/dist/index.umd.js"></script>
+
+  <script>
+    const openBtn = document.getElementById('openBtn');
+    const errorDiv = document.getElementById('error');
+    const resultDiv = document.getElementById('result');
+
+    openBtn.addEventListener('click', async () => {
+      errorDiv.style.display = 'none';
+      resultDiv.style.display = 'none';
+
+      // Step 1: Get access token from your backend
+      // In production, replace this with your actual backend endpoint
+      let accessToken;
+      try {
+        const res = await fetch('/api/casparser-token', { method: 'POST' });
+        const data = await res.json();
+        accessToken = data.access_token;
+      } catch (err) {
+        // For demo: use sandbox key directly (NOT for production)
+        accessToken = 'sandbox-with-json-responses';
+      }
+
+      // Step 2: Open Portfolio Connect widget
+      CASParserConnect.open({
+        accessToken: accessToken,
+        enableCdslFetch: true,
+        enableInbox: true,
+
+        onSuccess: function(data) {
+          console.log('Portfolio parsed:', data);
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = `
+            <h3>Portfolio Summary</h3>
+            <p><strong>Investor:</strong> ${data.investor?.name || 'N/A'}</p>
+            <p><strong>CAS Type:</strong> ${data.meta?.cas_type || 'Unknown'}</p>
+            <p><strong>Total Value:</strong> Rs.${(data.summary?.total_value || 0).toLocaleString()}</p>
+            <p><strong>Demat Accounts:</strong> ${(data.demat_accounts || []).length}</p>
+            <p><strong>Mutual Fund Folios:</strong> ${(data.mutual_funds || []).length}</p>
+            <details style="margin-top: 16px;">
+              <summary>View Raw JSON</summary>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </details>
+          `;
+        },
+
+        onError: function(err) {
+          console.error('Parse error:', err);
+          errorDiv.textContent = 'Error: ' + (err.message || 'Unknown error');
+          errorDiv.style.display = 'block';
+        },
+
+        onExit: function() {
+          console.log('Widget closed');
+        },
+
+        onEvent: function(event) {
+          console.log('Widget event:', event.type, event.data);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

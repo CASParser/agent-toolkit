@@ -1,0 +1,2196 @@
+openapi: 3.1.0
+info:
+  title: CAS Parser - Track Portfolios from CDSL, NSDL, CAMS, KFintech
+  description: API for parsing and analyzing CAS (Consolidated Account Statement) PDF files from NSDL, CDSL, and CAMS/KFintech, with a unified response format
+  version: 4.0.0
+  contact:
+    name: Sameer Kumar
+    email: sameer@casparser.in
+    
+servers:
+  - url: https://portfolio-parser.api.casparser.in
+    description: Production server (Core APIs)
+  - url: https://client-apis.casparser.in
+    description: Production server (Authorization APIs)
+  - url: http://localhost:5000
+    description: Local development server
+
+tags:
+  - name: CAS Parser
+    description: Endpoints for parsing CAS PDF files from different sources.
+  - name: CAS Generator
+    description: Endpoints for generating new CAS documents via email mailback (KFintech).
+  - name: CAS Fetch
+    description: |
+      Endpoints for fetching CAS documents with instant download.
+      Currently supports CDSL via OTP authentication.
+  - name: Email Import
+    description: |
+      Endpoints for importing CAS files directly from user email inboxes.
+      
+      **Supported Providers:** Gmail (more coming soon)
+      
+      **How it works:**
+      1. Call `POST /v4/inbox/connect` to get an OAuth URL
+      2. Redirect user to the OAuth URL for consent
+      3. User is redirected back to your `redirect_uri` with an encrypted `inbox_token`
+      4. Use the token to list/fetch CAS files from their inbox (`/v4/inbox/cas`)
+      5. Files are uploaded to temporary cloud storage (URLs expire in 24 hours)
+      
+      **Security:**
+      - Read-only access (we cannot send emails)
+      - Tokens are encrypted with server-side secret
+      - User can revoke access anytime via `/v4/inbox/disconnect`
+  - name: Contract Note Parser
+    description: Endpoints for parsing Contract Note PDF files from various SEBI brokers like Zerodha, Groww, Upstox, ICICI etc.
+  - name: Authorization
+    description: |
+      Endpoints for checking API quota and credits usage.
+      These endpoints help you monitor your API usage and remaining quota.
+  - name: Portfolio Connect
+    description: |
+      Endpoints for managing access tokens for the Portfolio Connect SDK.
+      Use these to generate short-lived `at_` prefixed tokens that can be safely passed to frontend applications.
+      Access tokens can be used in place of API keys on all v4 endpoints.
+
+paths:
+  # ============================================
+  # Authorization Endpoints (client-apis server)
+  # ============================================
+  /credits:
+    post:
+      tags:
+        - Authorization
+      summary: Check API Credits
+      description: |
+        Check your remaining API credits and usage for the current billing period.
+        
+        Returns:
+        - Number of API calls used and remaining credits
+        - Credit limit and reset date
+        - List of enabled features for your plan
+        
+        Credits reset at the start of each billing period.
+      operationId: checkCredits
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Credits information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  used:
+                    type: number
+                    description: Number of credits used this billing period
+                    example: 15.0
+                  remaining:
+                    type: number
+                    nullable: true
+                    description: Remaining credits (null if unlimited)
+                    example: 35.0
+                  limit:
+                    type: integer
+                    description: Total credit limit for billing period
+                    example: 50
+                  is_unlimited:
+                    type: boolean
+                    description: Whether the account has unlimited credits
+                    example: false
+                  resets_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: When credits reset (ISO 8601)
+                    example: "2026-02-15T00:00:00Z"
+                  enabled_features:
+                    type: array
+                    items:
+                      type: string
+                    description: List of API features enabled for your plan
+                    example: ["cams_kfintech_cas_parser", "cdsl_cas_parser", "nsdl_cas_parser"]
+        '400':
+          description: Bad request (e.g., using access token instead of API key)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for credits API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /logs:
+    post:
+      tags:
+        - Authorization
+      summary: Get API Usage Logs
+      description: |
+        Retrieve detailed API usage logs for your account.
+        
+        Returns a list of API calls with timestamps, features used, status codes, and credits consumed.
+        Useful for monitoring usage patterns and debugging.
+      operationId: getUsageLogs
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                  description: Start time filter (ISO 8601). Defaults to 30 days ago.
+                  example: "2026-01-01T00:00:00Z"
+                end_time:
+                  type: string
+                  format: date-time
+                  description: End time filter (ISO 8601). Defaults to now.
+                  example: "2026-01-31T23:59:59Z"
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+                  default: 100
+                  description: Maximum number of logs to return
+      responses:
+        '200':
+          description: Usage logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        request_id:
+                          type: string
+                          description: Unique request identifier
+                          example: "req_2xYz7KpL8mN3Ab"
+                        feature:
+                          type: string
+                          description: API feature used
+                          example: "cdsl_cas_parser"
+                        path:
+                          type: string
+                          description: API endpoint path
+                          example: "/v4/cdsl/parse"
+                        status_code:
+                          type: integer
+                          description: HTTP response status code
+                          example: 200
+                        credits:
+                          type: number
+                          description: Credits consumed for this request
+                          example: 1.0
+                        timestamp:
+                          type: string
+                          format: date-time
+                          description: When the request was made
+                          example: "2026-01-15T14:30:00Z"
+                  count:
+                    type: integer
+                    description: Number of logs returned
+                    example: 25
+        '400':
+          description: Bad request (e.g., using access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for logs API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /logs/summary:
+    post:
+      tags:
+        - Authorization
+      summary: Get Usage Summary
+      description: |
+        Get aggregated usage statistics grouped by feature.
+        
+        Useful for understanding which API features are being used most and tracking usage trends.
+      operationId: getUsageSummary
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                  description: Start time filter (ISO 8601). Defaults to start of current month.
+                end_time:
+                  type: string
+                  format: date-time
+                  description: End time filter (ISO 8601). Defaults to now.
+      responses:
+        '200':
+          description: Usage summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  summary:
+                    type: object
+                    properties:
+                      total_credits:
+                        type: number
+                        description: Total credits consumed in the period
+                        example: 45.5
+                      total_requests:
+                        type: integer
+                        description: Total API requests made in the period
+                        example: 42
+                      by_feature:
+                        type: array
+                        description: Usage breakdown by feature
+                        items:
+                          type: object
+                          properties:
+                            feature:
+                              type: string
+                              description: API feature name
+                              example: "cdsl_cas_parser"
+                            credits:
+                              type: number
+                              description: Credits consumed by this feature
+                              example: 15.0
+                            requests:
+                              type: integer
+                              description: Number of requests for this feature
+                              example: 15
+        '400':
+          description: Bad request (e.g., using access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for logs API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Portfolio Connect SDK Endpoints (client-apis server)
+  # ============================================
+  /v1/access-token:
+    post:
+      tags:
+        - Portfolio Connect
+      summary: Generate Access Token
+      description: |
+        Generate a short-lived access token from your API key.
+        
+        **Use this endpoint from your backend** to create tokens that can be safely passed to frontend/SDK.
+        
+        Access tokens:
+        - Are prefixed with `at_` for easy identification
+        - Valid for up to 60 minutes
+        - Can be used in place of API keys on all v4 endpoints
+        - Cannot be used to generate other access tokens
+      operationId: generateAccessToken
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiry_minutes:
+                  type: integer
+                  description: Token validity in minutes (max 60)
+                  default: 60
+                  maximum: 60
+                  minimum: 1
+                  example: 60
+      responses:
+        '200':
+          description: Access token generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: The at_ prefixed access token
+                    example: "at_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    description: Always "api_key" - token is a drop-in replacement for x-api-key header
+                    example: "api_key"
+                  expires_in:
+                    type: integer
+                    description: Token validity in seconds
+                    example: 3600
+        '400':
+          description: Bad request (e.g., trying to create token from access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Cannot create access token from access token"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/verify-token:
+    post:
+      tags:
+        - Portfolio Connect
+      summary: Verify Access Token
+      description: |
+        Verify an access token and check if it's still valid.
+        Useful for debugging token issues.
+      operationId: verifyAccessToken
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Token verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: Whether the token is valid
+                    example: true
+                  masked_api_key:
+                    type: string
+                    description: Masked API key (only shown if valid)
+                    example: "abc1****ef23"
+                  error:
+                    type: string
+                    description: Error message (only shown if invalid)
+                    example: "Token has expired"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Core Endpoints (portfolio-parser server)
+  # ============================================
+  /v4/smart/parse:
+    post:
+      tags:
+        - CAS Parser
+      summary: Smart Parse CAS PDF
+      description: |
+        This endpoint parses CAS (Consolidated Account Statement) PDF files from NSDL, CDSL, or CAMS/KFintech and returns data in a unified format.
+        It auto-detects the CAS type and transforms the data into a consistent structure regardless of the source.
+      operationId: smartParse
+      security:
+        - ApiKeyAuth: []
+      requestBody: 
+        $ref: '#/components/requestBodies/CASParseRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedResponse'
+        '400':
+          description: Bad request (Invalid PDF file, missing parameters, or invalid password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/nsdl/parse:
+    post:
+      tags:
+        - CAS Parser
+      summary: Parse NSDL CAS PDF
+      description: |
+        This endpoint specifically parses NSDL CAS (Consolidated Account Statement) PDF files and returns data in a unified format.
+        Use this endpoint when you know the PDF is from NSDL.
+      operationId: nsdlParse
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CASParseRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedResponse'
+        '400':
+          description: Bad request (Invalid PDF file, missing parameters, invalid password, or incorrect CAS type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/cdsl/parse:
+    post:
+      tags:
+        - CAS Parser
+      summary: Parse CDSL CAS PDF
+      description: |
+        This endpoint specifically parses CDSL CAS (Consolidated Account Statement) PDF files and returns data in a unified format.
+        Use this endpoint when you know the PDF is from CDSL.
+      operationId: cdslParse
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CASParseRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedResponse'
+        '400':
+          description: Bad request (Invalid PDF file, missing parameters, invalid password, or incorrect CAS type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/cams_kfintech/parse:
+    post:
+      tags:
+        - CAS Parser
+      summary: Parse CAMS/KFintech CAS PDF
+      description: |
+        This endpoint specifically parses CAMS/KFintech CAS (Consolidated Account Statement) PDF files and returns data in a unified format.
+        Use this endpoint when you know the PDF is from CAMS or KFintech.
+      operationId: camsKfintechParse
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CASParseRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedResponse'
+        '400':
+          description: Bad request (Invalid PDF file, missing parameters, invalid password, or incorrect CAS type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/contract_note/parse:
+    post:
+      tags:
+        - Contract Note Parser
+      summary: Parse Contract Note PDF
+      description: |
+        This endpoint parses Contract Note PDF files from various brokers including Zerodha, Groww, Upstox, ICICI Securities, and others.
+        
+        **What is a Contract Note?**
+        A contract note is a legal document that provides details of all trades executed by an investor. It includes:
+        - Trade details with timestamps, quantities, and prices
+        - Brokerage and charges breakdown
+        - Settlement information
+        - Regulatory compliance details
+        
+        **Supported Brokers:**
+        - Zerodha Broking Limited
+        - Groww Invest Tech Private Limited  
+        - Upstox (RKSV Securities)
+        - ICICI Securities Limited
+        - Auto-detection for unknown brokers
+        
+        **Key Features:**
+        - **Auto-detection**: Automatically identifies broker type from PDF content
+        - **Comprehensive parsing**: Extracts equity transactions, derivatives transactions, detailed trades, and charges
+        - **Flexible input**: Accepts both file upload and URL-based PDF input
+        - **Password protection**: Supports password-protected PDFs
+        
+        The API returns structured data including contract note information, client details, transaction summaries, and detailed trade-by-trade breakdowns.
+      operationId: parseContractNote
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ContractNoteParseRequest'
+      responses:
+        '200':
+          description: Successfully parsed contract note
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: '#/components/schemas/ContractNoteResponse'
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/kfintech/generate:
+    post:
+      tags:
+        - CAS Generator
+      summary: KFintech CAS Generator (Email Mailback)
+      description: |
+        Generate CAS via KFintech mailback. The CAS PDF will be sent to the investor's email.
+        
+        This is an async operation - the investor receives the CAS via email within a few minutes.
+        For instant CAS retrieval, use CDSL Fetch (`/v4/cdsl/fetch`).
+      operationId: kfintechGenerate
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - from_date
+                - to_date
+                - password
+              properties:
+                email:
+                  type: string
+                  description: Email address to receive the CAS document
+                  example: "user@example.com"
+                pan_no:
+                  type: string
+                  description: PAN number (optional)
+                  example: "ABCDE1234F"
+                from_date:
+                  type: string
+                  description: Start date (YYYY-MM-DD)
+                  example: "2023-01-01"
+                to_date:
+                  type: string
+                  description: End date (YYYY-MM-DD)
+                  example: "2023-12-31"
+                password:
+                  type: string
+                  description: Password for the PDF
+                  example: "Abcdefghi12$"
+      responses:
+        '200':
+          description: Request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "CAS request submitted. Check email shortly."
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/cdsl/fetch:
+    post:
+      tags:
+        - CAS Fetch
+      summary: CDSL CAS Fetch - Step 1 (Request OTP)
+      description: |
+        **Step 1 of 2**: Request OTP for CDSL CAS fetch.
+        
+        This endpoint:
+        1. Solves reCAPTCHA automatically (~15-20 seconds)
+        2. Submits login credentials to CDSL portal
+        3. Triggers OTP to user's registered mobile number
+        
+        After user receives OTP, call `/v4/cdsl/fetch/{session_id}/verify` to complete.
+      operationId: cdslFetchRequestOTP
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pan
+                - bo_id
+                - dob
+              properties:
+                pan:
+                  type: string
+                  description: PAN number
+                  example: "ABCDE1234F"
+                bo_id:
+                  type: string
+                  description: CDSL BO ID (16 digits)
+                  example: "1234567890123456"
+                dob:
+                  type: string
+                  description: Date of birth (YYYY-MM-DD)
+                  example: "1990-01-15"
+      responses:
+        '200':
+          description: OTP sent to registered mobile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  session_id:
+                    type: string
+                    description: Session ID for verify step
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  msg:
+                    type: string
+                    example: "OTP sent to registered mobile"
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/cdsl/fetch/{session_id}/verify:
+    post:
+      tags:
+        - CAS Fetch
+      summary: CDSL CAS Fetch - Step 2 (Verify OTP & Get Files)
+      description: |
+        **Step 2 of 2**: Verify OTP and retrieve CDSL CAS files.
+        
+        After successful verification, CAS PDFs are fetched from CDSL portal,
+        uploaded to cloud storage, and returned as direct download URLs.
+      operationId: cdslFetchVerifyOTP
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Session ID from Step 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+              properties:
+                otp:
+                  type: string
+                  description: OTP received on mobile
+                  example: "123456"
+                num_periods:
+                  type: integer
+                  description: Number of monthly statements to fetch (default 6)
+                  default: 6
+                  example: 6
+      responses:
+        '200':
+          description: CAS files fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Fetched 6 CAS files"
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                          example: "CDSL_CAS_1234567890123456_NOV2025.pdf"
+                        url:
+                          type: string
+                          description: Direct download URL (cloud storage)
+                          example: "https://cdn.casparser.in/cdsl-cas/session-id/CDSL_CAS_1234567890123456_NOV2025.pdf"
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Session not found or expired
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  
+  /v4/inbox/connect:
+    post:
+      tags:
+        - Email Import
+      summary: Connect Email Provider (Initiate OAuth)
+      description: |
+        Initiate OAuth flow to connect user's email inbox.
+        
+        Returns an `oauth_url` that you should redirect the user to. After authorization,
+        they are redirected back to your `redirect_uri` with the following query parameters:
+        
+        **On success:**
+        - `inbox_token` - Encrypted token to store client-side
+        - `email` - Email address of the connected account
+        - `state` - Your original state parameter (for CSRF verification)
+        
+        **On error:**
+        - `error` - Error code (e.g., `access_denied`, `token_exchange_failed`)
+        - `state` - Your original state parameter
+        
+        **Store the `inbox_token` client-side** and use it for all subsequent inbox API calls.
+      operationId: inboxConnect
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - redirect_uri
+              properties:
+                redirect_uri:
+                  type: string
+                  format: uri
+                  description: Your callback URL to receive the inbox_token (must be http or https)
+                  example: "https://yourapp.com/oauth-callback"
+                state:
+                  type: string
+                  description: State parameter for CSRF protection (returned in redirect)
+                  example: "abc123"
+      responses:
+        '200':
+          description: OAuth URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  oauth_url:
+                    type: string
+                    format: uri
+                    description: Redirect user to this URL to start OAuth flow
+                    example: "https://accounts.google.com/o/oauth2/v2/auth?client_id=..."
+                  expires_in:
+                    type: integer
+                    description: Seconds until the OAuth URL expires (typically 10 minutes)
+                    example: 600
+        '400':
+          description: Invalid or missing redirect_uri
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v4/inbox/status:
+    post:
+      tags:
+        - Email Import
+      summary: Check Email Connection Status
+      description: |
+        Verify if an `inbox_token` is still valid and check connection status.
+        
+        Use this to check if the user needs to re-authenticate (e.g., if they
+        revoked access in their email provider settings).
+      operationId: inboxStatus
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-inbox-token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: The encrypted inbox token
+      responses:
+        '200':
+          description: Token status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  connected:
+                    type: boolean
+                    description: Whether the token is valid and usable
+                    example: true
+                  provider:
+                    type: string
+                    example: "gmail"
+                  email:
+                    type: string
+                    format: email
+                    description: Email address of the connected account
+                    example: "user@gmail.com"
+        '401':
+          description: Token is invalid, expired, or revoked. User must reconnect.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  msg:
+                    type: string
+                    example: "Email access revoked. Please reconnect."
+                  requires_reconnect:
+                    type: boolean
+                    example: true
+
+  /v4/inbox/cas:
+    post:
+      tags:
+        - Email Import
+      summary: List CAS Files from Email Inbox
+      description: |
+        Search the user's email inbox for CAS files from known senders
+        (CAMS, KFintech, CDSL, NSDL).
+        
+        Files are uploaded to temporary cloud storage. **URLs expire in 24 hours.**
+        
+        Optionally filter by CAS provider and date range.
+        
+        **Billing:** 0.2 credits per request (charged regardless of success or number of files found).
+      operationId: inboxCasList
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-inbox-token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: The encrypted inbox token
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_date:
+                  type: string
+                  format: date
+                  description: Start date in ISO format (YYYY-MM-DD). Defaults to 30 days ago.
+                  example: "2025-12-01"
+                end_date:
+                  type: string
+                  format: date
+                  description: End date in ISO format (YYYY-MM-DD). Defaults to today.
+                  example: "2025-12-31"
+                cas_types:
+                  type: array
+                  items:
+                    type: string
+                    enum: [cdsl, nsdl, cams, kfintech]
+                  description: |
+                    Filter by CAS provider(s):
+                    - `cdsl` → eCAS@cdslstatement.com
+                    - `nsdl` → NSDL-CAS@nsdl.co.in
+                    - `cams` → donotreply@camsonline.com
+                    - `kfintech` → samfS@kfintech.com
+                  example: ["cdsl", "nsdl"]
+      responses:
+        '200':
+          description: CAS files found in inbox
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmailCASFile'
+                  count:
+                    type: integer
+                    description: Number of CAS files found
+                    example: 5
+        '401':
+          description: Token invalid or revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  msg:
+                    type: string
+                    example: "Email access revoked. Please reconnect."
+                  requires_reconnect:
+                    type: boolean
+                    example: true
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/inbox/disconnect:
+    post:
+      tags:
+        - Email Import
+      summary: Disconnect Email Provider
+      description: |
+        Revoke email access and invalidate the token.
+        
+        This calls the provider's token revocation API (e.g., Google's revoke endpoint)
+        to ensure the user's consent is properly removed.
+        
+        After calling this, the `inbox_token` becomes unusable.
+      operationId: inboxDisconnect
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-inbox-token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: The encrypted inbox token to revoke
+      responses:
+        '200':
+          description: Successfully disconnected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Email disconnected successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: |
+        Your API key for authentication.
+        Use `sandbox-with-json-responses` as Sandbox key.
+
+  headers:
+    X-Request-ID:
+      description: |
+        Unique request identifier for tracking and support.
+        Format: `req_<alphanumeric>` (e.g., `req_2xYz7KpL8mN3Ab`)
+        
+        Use this ID when:
+        - Contacting support about a specific request
+        - Correlating API calls with usage logs
+        - Debugging issues in your application
+        
+        You can also provide your own `X-Request-ID` header in the request
+        (must start with `req_`) to use your own tracking ID.
+      schema:
+        type: string
+        pattern: '^req_[A-Za-z0-9]+$'
+        example: "req_2xYz7KpL8mN3Ab"
+      
+  requestBodies:
+    CASParseRequest:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            description: Provide either `pdf_file` OR `pdf_url` (one is required)
+            properties:
+              pdf_file:
+                type: string
+                format: binary
+                description: CAS PDF file to parse (required if pdf_url not provided)
+              pdf_url:
+                type: string
+                format: uri
+                description: URL to the CAS PDF file (required if pdf_file not provided)
+              password:
+                type: string
+                description: Password for the PDF file (if required)
+        application/json:
+          schema:
+            type: object
+            description: Provide either `pdf_file` OR `pdf_url` (one is required)
+            properties:
+              pdf_file:
+                type: string
+                format: base64
+                description: Base64 encoded CAS PDF file (required if pdf_url not provided)
+              pdf_url:
+                type: string
+                format: uri
+                description: URL to the CAS PDF file (required if pdf_file not provided)
+              password:
+                type: string
+                description: Password for the PDF file (if required)
+              
+    ContractNoteParseRequest:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            properties:
+              pdf_file:
+                type: string
+                format: binary
+                description: Contract note PDF file to parse
+              password:
+                type: string
+                description: Password for the PDF file (usually PAN number)
+              broker_type:
+                type: string
+                description: Optional broker type override
+                enum: [zerodha, groww, upstox, icici]
+            required:
+              - pdf_file
+              - password
+        application/json:
+          schema:
+            type: object
+            properties:
+              pdf_file:
+                type: string
+                format: base64
+                description: Base64 encoded contract note PDF file
+                example: "JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo..."
+              pdf_url:
+                type: string
+                format: uri
+                description: URL to the contract note PDF file
+                example: "https://example.com/contract_note.pdf"
+              password:
+                type: string
+                description: Password for the PDF file (usually PAN number for Zerodha)
+                example: "FAXAK2545F"
+              broker_type:
+                type: string
+                description: Optional broker type override. If not provided, system will auto-detect.
+                enum: [zerodha, groww, upstox, icici]
+                example: "zerodha"
+            oneOf:
+              - required: [pdf_file, password]
+              - required: [pdf_url, password]
+              
+  responses:
+    ParseSuccess:
+      description: Successful operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnifiedResponse'
+    ParseBadRequest:
+      description: Bad request (Invalid PDF file, missing parameters, or invalid password)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized. This can happen if the `x-api-key` header is missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthErrorResponse'
+          example:
+            status: "error"
+            msg: "Authentication failed: API key is missing. Please provide a valid API key in the x-api-key header."
+    Forbidden:
+      description: Forbidden. This can happen if the API key is invalid or the quota has been exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthErrorResponse'
+          example:
+            status: "error"
+            msg: "Authentication failed: API quota exceeded or invalid API key. Please check your API key or quota limits."
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    AuthErrorResponse:
+      type: object
+      required:
+        - status
+        - msg
+      properties:
+        status:
+          type: string
+          description: The status of the error.
+          example: error
+        msg:
+          type: string
+          description: A descriptive message explaining the error.
+          example: "Authentication failed: API key is missing."
+          
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - msg
+      properties:
+        status:
+          type: string
+          description: The status of the error.
+          enum: [failed]
+          example: failed
+        msg:
+          type: string
+          description: A descriptive message explaining the error.
+          example: "Invalid PDF file or password."
+    UnifiedResponse:
+      type: object
+      properties:
+        meta:
+          type: object
+          properties:
+            cas_type:
+              type: string
+              enum: [NSDL, CDSL, CAMS_KFINTECH]
+              description: Type of CAS detected and processed
+            statement_period:
+              type: object
+              properties:
+                from:
+                  type: string
+                  format: date
+                  description: Start date of the statement period
+                to:
+                  type: string
+                  format: date
+                  description: End date of the statement period
+            generated_at:
+              type: string
+              format: date-time
+              description: Timestamp when the response was generated
+        investor:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of the investor
+            pan:
+              type: string
+              description: PAN (Permanent Account Number) of the investor
+            email:
+              type: string
+              format: email
+              description: Email address of the investor
+            address:
+              type: string
+              description: Address of the investor
+            pincode:
+              type: string
+              description: Postal code of the investor's address
+            mobile:
+              type: string
+              description: Mobile number of the investor
+            cas_id:
+              type: string
+              description: CAS ID of the investor (only for NSDL and CDSL)
+        summary:
+          type: object
+          properties:
+            total_value:
+              type: number
+              format: float
+              description: Total portfolio value across all accounts
+            accounts:
+              type: object
+              properties:
+                demat:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                      description: Number of demat accounts
+                    total_value:
+                      type: number
+                      format: float
+                      description: Total value of demat accounts
+                mutual_funds:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                      description: Number of mutual fund folios
+                    total_value:
+                      type: number
+                      format: float
+                      description: Total value of mutual funds
+                insurance:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                      description: Number of insurance policies
+                    total_value:
+                      type: number
+                      format: float
+                      description: Total value of insurance policies
+                nps:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                      description: Number of NPS accounts
+                    total_value:
+                      type: number
+                      format: float
+                      description: Total value of NPS accounts
+        demat_accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DematAccount'
+        mutual_funds:
+          type: array
+          items:
+            $ref: '#/components/schemas/MutualFundFolio'
+        insurance:
+          type: object
+          properties:
+            life_insurance_policies:
+              type: array
+              items:
+                $ref: '#/components/schemas/LifeInsurancePolicy'
+        nps:
+          type: array
+          items:
+            $ref: '#/components/schemas/NPSAccount'
+          description: List of NPS accounts
+              
+    DematAccount:
+      type: object
+      properties:
+        demat_type:
+          type: string
+          enum: [NSDL, CDSL]
+          description: Type of demat account
+        dp_id:
+          type: string
+          description: Depository Participant ID
+        dp_name:
+          type: string
+          description: Depository Participant name
+        client_id:
+          type: string
+          description: Client ID
+        bo_id:
+          type: string
+          description: Beneficiary Owner ID (primarily for CDSL)
+        value:
+          type: number
+          format: float
+          description: Total value of the demat account
+        linked_holders:
+          type: array
+          items:
+            $ref: '#/components/schemas/LinkedHolder'
+          description: List of account holders linked to this demat account
+        holdings:
+          type: object
+          properties:
+            equities:
+              type: array
+              items:
+                $ref: '#/components/schemas/Equity'
+            corporate_bonds:
+              type: array
+              items:
+                $ref: '#/components/schemas/CorporateBond'
+            government_securities:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovernmentSecurity'
+            aifs:
+              type: array
+              items:
+                $ref: '#/components/schemas/AIF'
+            demat_mutual_funds:
+              type: array
+              items:
+                $ref: '#/components/schemas/DematMutualFund'
+        additional_info:
+          type: object
+          description: Additional information specific to the demat account type
+          properties:
+            bo_status:
+              type: string
+              description: Beneficiary Owner status (CDSL)
+            bo_sub_status:
+              type: string
+              description: Beneficiary Owner sub-status (CDSL)
+            bo_type:
+              type: string
+              description: Beneficiary Owner type (CDSL)
+            bsda:
+              type: string
+              description: Basic Services Demat Account status (CDSL)
+            email:
+              type: string
+              format: email
+              description: Email associated with the demat account (CDSL)
+            status:
+              type: string
+              description: Account status (CDSL)
+            nominee:
+              type: string
+              description: Nominee details (CDSL)
+            linked_pans:
+              type: array
+              items:
+                type: string
+              description: List of linked PAN numbers (NSDL)
+          
+    Equity:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the equity
+        name:
+          type: string
+          description: Name of the equity
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: List of transactions for this holding (beta)
+        additional_info:
+          type: object
+          description: Additional information specific to the equity
+          properties:
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period (beta)
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period (beta)
+          
+    CorporateBond:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the corporate bond
+        name:
+          type: string
+          description: Name of the corporate bond
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: List of transactions for this holding (beta)
+        additional_info:
+          type: object
+          description: Additional information specific to the corporate bond
+          properties:
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period (beta)
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period (beta)
+          
+    GovernmentSecurity:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the government security
+        name:
+          type: string
+          description: Name of the government security
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: List of transactions for this holding (beta)
+        additional_info:
+          type: object
+          description: Additional information specific to the government security
+          properties:
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period (beta)
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period (beta)
+          
+    AIF:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the AIF
+        name:
+          type: string
+          description: Name of the AIF
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: List of transactions for this holding (beta)
+        additional_info:
+          type: object
+          description: Additional information specific to the AIF
+          properties:
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period (beta)
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period (beta)
+          
+    DematMutualFund:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the mutual fund
+        name:
+          type: string
+          description: Name of the mutual fund
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+          description: List of transactions for this holding (beta)
+        additional_info:
+          type: object
+          description: Additional information specific to the mutual fund
+          properties:
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period (beta)
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period (beta)
+          
+    MutualFundFolio:
+      type: object
+      properties:
+        folio_number:
+          type: string
+          description: Folio number
+        amc:
+          type: string
+          description: Asset Management Company name
+        registrar:
+          type: string
+          description: Registrar and Transfer Agent name
+        value:
+          type: number
+          format: float
+          description: Total value of the folio
+        linked_holders:
+          type: array
+          items:
+            $ref: '#/components/schemas/LinkedHolder'
+          description: List of account holders linked to this mutual fund folio
+        schemes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MutualFundScheme'
+        additional_info:
+          type: object
+          description: Additional folio information
+          properties:
+            pan:
+              type: string
+              description: PAN associated with the folio
+            pankyc:
+              type: string
+              description: PAN KYC status
+            kyc:
+              type: string
+              description: KYC status of the folio
+            
+    MutualFundScheme:
+      type: object
+      properties:
+        isin:
+          type: string
+          description: ISIN code of the scheme
+        name:
+          type: string
+          description: Scheme name
+        type:
+          type: string
+          enum: [Equity, Debt, Hybrid, Other]
+          description: Type of mutual fund scheme
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        nav:
+          type: number
+          format: float
+          description: Net Asset Value per unit
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        cost:
+          type: number
+          format: float
+          description: Cost of investment
+        gain:
+          type: object
+          properties:
+            absolute:
+              type: number
+              format: float
+              description: Absolute gain or loss
+            percentage:
+              type: number
+              format: float
+              description: Percentage gain or loss
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        nominees:
+          type: array
+          items:
+            type: string
+          description: List of nominees
+        additional_info:
+          type: object
+          description: Additional information specific to the scheme
+          properties:
+            advisor:
+              type: string
+              description: Financial advisor name (CAMS/KFintech)
+            rta_code:
+              type: string
+              description: RTA code for the scheme (CAMS/KFintech)
+            amfi:
+              type: string
+              description: AMFI code for the scheme (CAMS/KFintech)
+            open_units:
+              type: number
+              format: float
+              nullable: true
+              description: Opening balance units for the statement period
+            close_units:
+              type: number
+              format: float
+              nullable: true
+              description: Closing balance units for the statement period
+          
+    Transaction:
+      type: object
+      description: Unified transaction schema for all holding types (MF folios, equities, bonds, etc.)
+      properties:
+        date:
+          type: string
+          format: date
+          description: Transaction date (YYYY-MM-DD)
+        description:
+          type: string
+          description: Transaction description/particulars
+        type:
+          type: string
+          description: Transaction type. Possible values are PURCHASE, PURCHASE_SIP, REDEMPTION, SWITCH_IN, SWITCH_IN_MERGER, SWITCH_OUT, SWITCH_OUT_MERGER, DIVIDEND_PAYOUT, DIVIDEND_REINVEST, SEGREGATION, STAMP_DUTY_TAX, TDS_TAX, STT_TAX, MISC, REVERSAL, UNKNOWN.
+          enum: [PURCHASE, PURCHASE_SIP, REDEMPTION, SWITCH_IN, SWITCH_IN_MERGER, SWITCH_OUT, SWITCH_OUT_MERGER, DIVIDEND_PAYOUT, DIVIDEND_REINVEST, SEGREGATION, STAMP_DUTY_TAX, TDS_TAX, STT_TAX, MISC, REVERSAL, UNKNOWN]
+        amount:
+          type: number
+          format: float
+          nullable: true
+          description: Transaction amount in currency (computed from units × price/NAV)
+        units:
+          type: number
+          format: float
+          description: Number of units involved in transaction
+        nav:
+          type: number
+          format: float
+          nullable: true
+          description: NAV/price per unit on transaction date
+        balance:
+          type: number
+          format: float
+          description: Balance units after transaction
+        dividend_rate:
+          type: number
+          format: float
+          nullable: true
+          description: Dividend rate (for DIVIDEND_PAYOUT transactions)
+        additional_info:
+          type: object
+          description: Additional transaction-specific fields that vary by source
+          properties:
+            credit:
+              type: number
+              format: float
+              description: Units credited (demat transactions)
+            debit:
+              type: number
+              format: float
+              description: Units debited (demat transactions)
+            stamp_duty:
+              type: number
+              format: float
+              description: Stamp duty charged
+            order_no:
+              type: string
+              description: Order/transaction reference number (demat transactions)
+            price:
+              type: number
+              format: float
+              description: Price per unit (NSDL/CDSL MF transactions)
+            income_distribution:
+              type: number
+              format: float
+              description: Income distribution amount (CDSL MF transactions)
+            capital_withdrawal:
+              type: number
+              format: float
+              description: Capital withdrawal amount (CDSL MF transactions)
+
+          
+    LifeInsurancePolicy:
+      type: object
+      properties:
+        policy_number:
+          type: string
+          description: Insurance policy number
+        provider:
+          type: string
+          description: Insurance company name
+        policy_name:
+          type: string
+          description: Name of the insurance policy
+        life_assured:
+          type: string
+          description: Name of the life assured
+        status:
+          type: string
+          description: Status of the policy (e.g., Active, Lapsed)
+        sum_assured:
+          type: number
+          format: float
+          description: Sum assured amount
+        premium_amount:
+          type: number
+          format: float
+          description: Premium amount
+        premium_frequency:
+          type: string
+          description: Frequency of premium payment (e.g., Annual, Monthly)
+        additional_info:
+          type: object
+          description: Additional information specific to the policy
+          
+    NPSAccount:
+      type: object
+      properties:
+        pran:
+          type: string
+          description: Permanent Retirement Account Number (PRAN)
+        cra:
+          type: string
+          description: Central Record Keeping Agency name
+        value:
+          type: number
+          format: float
+          description: Total value of the NPS account
+        funds:
+          type: array
+          items:
+            $ref: '#/components/schemas/NPSFund'
+        linked_holders:
+          type: array
+          items:
+            $ref: '#/components/schemas/LinkedHolder'
+          description: List of account holders linked to this NPS account
+        additional_info:
+          type: object
+          description: Additional information specific to the NPS account
+              
+    NPSFund:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the NPS fund
+        units:
+          type: number
+          format: float
+          description: Number of units held
+        nav:
+          type: number
+          format: float
+          description: Net Asset Value per unit
+        value:
+          type: number
+          format: float
+          description: Current market value of the holding
+        cost:
+          type: number
+          format: float
+          description: Cost of investment
+        additional_info:
+          type: object
+          description: Additional information specific to the NPS fund
+          properties:
+            tier:
+              type: number
+              enum: [1, 2, null]
+              description: NPS tier (Tier I or Tier II)
+            manager:
+              type: string
+              description: Fund manager name
+              
+    LinkedHolder:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the account holder
+        pan:
+          type: string
+          description: PAN of the account holder
+
+    EmailCASFile:
+      type: object
+      description: A CAS file found in the user's email inbox
+      properties:
+        message_id:
+          type: string
+          description: Unique identifier for the email message (use for subsequent API calls)
+          example: "18d4a2b3c4d5e6f7"
+        filename:
+          type: string
+          description: Standardized filename (provider_YYYYMMDD_uniqueid.pdf)
+          example: "cdsl_20250115_a1b2c3d4.pdf"
+        original_filename:
+          type: string
+          description: Original attachment filename from the email
+          example: "CDSL_CAS_Statement.pdf"
+        message_date:
+          type: string
+          format: date
+          description: Date the email was received
+          example: "2025-01-15"
+        cas_type:
+          type: string
+          enum: [cdsl, nsdl, cams, kfintech]
+          description: Detected CAS provider based on sender email
+          example: "cdsl"
+        size:
+          type: integer
+          description: File size in bytes
+          example: 245000
+        url:
+          type: string
+          format: uri
+          description: Direct download URL (presigned, expires based on expires_in)
+          example: "https://cdn.casparser.in/email-cas/user123/cdsl_20250115_a1b2c3d4.pdf"
+        expires_in:
+          type: integer
+          description: URL expiration time in seconds (default 86400 = 24 hours)
+          example: 86400
+          
+    ContractNoteResponse:
+      type: object
+      properties:
+        contract_note_info:
+          type: object
+          properties:
+            contract_note_number:
+              type: string
+              description: Contract note reference number
+              example: "CNT-25/26-73436720"
+            trade_date:
+              type: string
+              format: date
+              description: Date when trades were executed
+              example: "2025-08-05"
+            settlement_number:
+              type: string
+              description: Settlement reference number
+              example: "2025149"
+            settlement_date:
+              type: string
+              format: date
+              description: Settlement date for the trades
+              example: "2025-08-06"
+        broker_info:
+          type: object
+          properties:
+            broker_type:
+              type: string
+              description: Auto-detected or specified broker type
+              enum: [zerodha, groww, upstox, icici, unknown]
+              example: "zerodha"
+            name:
+              type: string
+              description: Broker company name
+              example: "Zerodha Broking Limited"
+            sebi_registration:
+              type: string
+              description: SEBI registration number of the broker
+              example: "INZ000031633"
+        client_info:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Client name
+              example: "VIRENDER KUMAR"
+            pan:
+              type: string
+              description: Client PAN number
+              example: "FAXAK2545F"
+            ucc:
+              type: string
+              description: Unique Client Code
+              example: "YS3654"
+            place_of_supply:
+              type: string
+              description: GST place of supply
+              example: "DELHI"
+            gst_state_code:
+              type: string
+              description: GST state code
+              example: "7"
+            address:
+              type: string
+              description: Client address
+        equity_transactions:
+          type: array
+          description: Summary of equity transactions grouped by security
+          items:
+            type: object
+            properties:
+              isin:
+                type: string
+                description: ISIN code of the security
+                example: "INE172A01027"
+              security_name:
+                type: string
+                description: Name of the security
+                example: "CASTROLIND"
+              security_symbol:
+                type: string
+                description: Trading symbol
+                example: "CASTROLIND"
+              buy_quantity:
+                type: number
+                format: float
+                description: Total quantity purchased
+              buy_wap:
+                type: number
+                format: float
+                description: Weighted Average Price for buy transactions
+              buy_total_value:
+                type: number
+                format: float
+                description: Total value of buy transactions
+              sell_quantity:
+                type: number
+                format: float
+                description: Total quantity sold
+              sell_wap:
+                type: number
+                format: float
+                description: Weighted Average Price for sell transactions
+              sell_total_value:
+                type: number
+                format: float
+                description: Total value of sell transactions
+              net_obligation:
+                type: number
+                format: float
+                description: Net amount payable/receivable for this security
+        derivatives_transactions:
+          type: array
+          description: Summary of derivatives transactions
+          items:
+            type: object
+            properties:
+              contract_description:
+                type: string
+                description: Derivatives contract description
+                example: "NIFTY24802410DPE"
+              buy_sell_bf_cf:
+                type: string
+                description: Transaction type (Buy/Sell/Bring Forward/Carry Forward)
+                example: "B"
+              quantity:
+                type: number
+                format: float
+                description: Quantity traded
+              wap_per_unit:
+                type: number
+                format: float
+                description: Weighted Average Price per unit
+              brokerage_per_unit:
+                type: number
+                format: float
+                description: Brokerage charged per unit
+              closing_rate_per_unit:
+                type: number
+                format: float
+                description: Closing rate per unit
+              net_total:
+                type: number
+                format: float
+                description: Net total amount
+        detailed_trades:
+          type: array
+          description: Detailed breakdown of all individual trades
+          items:
+            type: object
+            properties:
+              order_number:
+                type: string
+                description: Order reference number
+                example: "1000000042939390"
+              order_time:
+                type: string
+                description: Time when order was placed
+                example: "13:13:13"
+              trade_number:
+                type: string
+                description: Trade reference number
+                example: "4006567"
+              trade_time:
+                type: string
+                description: Time when trade was executed
+                example: "13:13:13"
+              security_description:
+                type: string
+                description: Security name with exchange and ISIN
+                example: "CASTROLIND-EQ/INE172A01027"
+              buy_sell:
+                type: string
+                description: Transaction type (B for Buy, S for Sell)
+                example: "B"
+              exchange:
+                type: string
+                description: Exchange name
+                example: "NSE"
+              quantity:
+                type: number
+                format: float
+                description: Quantity traded
+              brokerage:
+                type: number
+                format: float
+                description: Brokerage charged for this trade
+              net_rate_per_unit:
+                type: number
+                format: float
+                description: Net rate per unit
+              closing_rate_per_unit:
+                type: number
+                format: float
+                description: Closing rate per unit
+              net_total:
+                type: number
+                format: float
+                description: Net total for this trade
+              remarks:
+                type: string
+                description: Additional remarks or notes
+        charges_summary:
+          type: object
+          description: Breakdown of various charges and fees
+          properties:
+            pay_in_pay_out_obligation:
+              type: number
+              format: float
+              description: Net pay-in/pay-out obligation
+            taxable_value_brokerage:
+              type: number
+              format: float
+              description: Taxable brokerage amount
+            exchange_transaction_charges:
+              type: number
+              format: float
+              description: Exchange transaction charges
+            cgst:
+              type: number
+              format: float
+              description: Central GST amount
+            sgst:
+              type: number
+              format: float
+              description: State GST amount
+            igst:
+              type: number
+              format: float
+              description: Integrated GST amount
+            securities_transaction_tax:
+              type: number
+              format: float
+              description: Securities Transaction Tax
+            sebi_turnover_fees:
+              type: number
+              format: float
+              description: SEBI turnover fees
+            stamp_duty:
+              type: number
+              format: float
+              description: Stamp duty charges
+            net_amount_receivable_payable:
+              type: number
+              format: float
+              description: Final net amount receivable or payable
