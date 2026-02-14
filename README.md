@@ -9,6 +9,18 @@ CAS Parser is an API platform that extracts structured data from Indian financia
 - **REST API** — parse CAS PDFs from CDSL, NSDL, and CAMS/KFintech into structured JSON
 - **Contract Notes** — parse broker trade documents from Zerodha, Groww, Upstox, ICICI
 
+## What's in the Toolkit
+
+| Component | What it does |
+|-----------|-------------|
+| **AGENTS.md** | Integration rules your AI agent follows automatically |
+| **SKILL.md** | Domain knowledge (Indian financial concepts, API architecture, integration patterns) |
+| **Templates** | 14 copy-paste-ready code snippets (Python, Node.js, React, HTML, curl) |
+| **References** | 9 detailed guides + full OpenAPI spec for complex flows |
+| **MCP Server** | 17 live API tools your agent can call directly (parse, fetch, import, credits) |
+
+The agent instructions + domain knowledge + MCP tools work together so your AI coding agent can build CAS Parser integrations without you having to explain the API.
+
 ## Quick Start
 
 ### 1. Install the Skill

@@ -55,6 +55,17 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/access-token`. Never expose raw API keys to the frontend.
 - See [`references/portfolio-connect-sdk.md`](skills/casparser/references/portfolio-connect-sdk.md) for full integration guide.
 
+### PDF Requirements
+- Only **original, digitally-generated PDFs** are supported. No scanned/photographed PDFs (no OCR).
+- **Tampered or modified PDFs are rejected** — the API has built-in fraud prevention for credit underwriting use-cases.
+- Data is extracted verbatim from the PDF — no estimation, interpolation, or enrichment. Missing fields are `null`, never fabricated.
+
+### Error Handling & Retry
+- **400/401/403 errors are NOT retryable** — fix the request (wrong password, invalid key, quota exceeded).
+- **500/502/503 errors ARE retryable** — use exponential backoff (1s, 2s, 4s).
+- Set timeouts to **60s for parse operations**, 50s for CDSL fetch Step 1, 10s for credits/tokens.
+- See [`references/error-handling.md`](skills/casparser/references/error-handling.md) for retry code examples and timeout guidance.
+
 ### Response Format
 - All CAS parse endpoints return a **unified response** regardless of CAS type (CDSL, NSDL, or CAMS/KFintech).
 - Top-level keys: `meta`, `investor`, `summary`, `demat_accounts`, `mutual_funds`, `insurance`, `nps`.

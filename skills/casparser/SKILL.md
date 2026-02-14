@@ -37,6 +37,28 @@ CAS PDFs are always password-protected. The password format varies:
 
 The caller passes the password as-is; the API uses it to unlock the PDF.
 
+## PDF Requirements & Limitations
+
+### What PDFs Work
+
+- **Original, digitally-generated PDFs** from CDSL, NSDL, CAMS, KFintech, or supported brokers
+- Password-protected (always — CAS PDFs are never unprotected)
+- File size: up to 10MB
+
+### What PDFs Do NOT Work
+
+- **Scanned PDFs** — the API does not perform OCR. Only digitally-generated PDFs are supported.
+- **Tampered or modified PDFs** — the API has built-in fraud prevention that detects altered documents. This is by design, as CAS data may be used for credit underwriting and financial analysis.
+- **Older non-standard formats** — very old CAS statements (pre-2015) may use non-standard layouts that aren't supported.
+- **Non-CAS PDFs** — the API only parses CAS statements and contract notes, not arbitrary financial documents.
+
+### Accuracy & Trust
+
+- The API extracts data exactly as it appears in the PDF — no estimation, interpolation, or external data enrichment.
+- All monetary values are sourced directly from the document. NAV, units, and transaction amounts are extracted verbatim.
+- If a field is missing from the PDF, it will be `null` in the response — never fabricated.
+- For financial applications, always validate that `summary.total_value` matches your expectations before processing.
+
 ## API Architecture
 
 ### Base URLs
@@ -247,16 +269,35 @@ To use the MCP server, agents still need a valid API key. The sandbox key `sandb
 
 ### Available MCP Tools
 
-The MCP server exposes tools for:
-- **Smart Parse** — Parse any CAS PDF (auto-detect type)
-- **CDSL/NSDL/CAMS Parse** — Parse specific CAS types
-- **Contract Note Parse** — Parse broker contract notes
-- **CDSL Fetch** — Request OTP and verify for CDSL CAS download
-- **KFintech Generate** — Trigger CAS email mailback
-- **Inbox Connect/Status/CAS/Disconnect** — Gmail import flow
-- **Credits** — Check API quota
-- **Logs / Logs Summary** — Usage monitoring
-- **Access Token** — Generate frontend tokens
+The MCP server is auto-generated from the OpenAPI spec. Each tool maps to an API endpoint:
+
+| Tool (operationId) | Endpoint | Description | Key Parameters |
+|--------------------|----------|-------------|----------------|
+| `smartParse` | `POST /v4/smart/parse` | Parse any CAS PDF (auto-detect type) | `pdf_file` or `pdf_url`, `password` |
+| `nsdlParse` | `POST /v4/nsdl/parse` | Parse NSDL CAS specifically | `pdf_file` or `pdf_url`, `password` |
+| `cdslParse` | `POST /v4/cdsl/parse` | Parse CDSL CAS specifically | `pdf_file` or `pdf_url`, `password` |
+| `camsKfintechParse` | `POST /v4/cams_kfintech/parse` | Parse CAMS/KFintech CAS specifically | `pdf_file` or `pdf_url`, `password` |
+| `parseContractNote` | `POST /v4/contract_note/parse` | Parse broker contract notes | `pdf_file` or `pdf_url`, `password` |
+| `cdslFetchRequestOTP` | `POST /v4/cdsl/fetch` | CDSL fetch Step 1 — request OTP | `pan`, `bo_id`, `dob` |
+| `cdslFetchVerifyOTP` | `POST /v4/cdsl/fetch/{session_id}/verify` | CDSL fetch Step 2 — verify OTP | `session_id`, `otp`, `num_periods` |
+| `kfintechGenerate` | `POST /v4/kfintech/generate` | Trigger KFintech CAS mailback | `email`, `from_date`, `to_date`, `password` |
+| `inboxConnect` | `POST /v4/inbox/connect` | Start Gmail OAuth flow | `redirect_uri`, `state` |
+| `inboxStatus` | `GET /v4/inbox/status` | Check inbox connection status | `x-inbox-token` header |
+| `inboxCasList` | `GET /v4/inbox/cas` | List CAS files from inbox | `x-inbox-token` header, optional filters |
+| `inboxDisconnect` | `POST /v4/inbox/disconnect` | Revoke Gmail access | `x-inbox-token` header |
+| `checkCredits` | `POST /credits` | Check remaining API quota | — |
+| `getUsageLogs` | `POST /logs` | Get detailed usage logs | optional `from_date`, `to_date` |
+| `getUsageSummary` | `POST /logs/summary` | Get aggregated usage stats | optional `from_date`, `to_date` |
+| `generateAccessToken` | `POST /v1/access-token` | Generate frontend token | optional `expiry_minutes` |
+| `verifyAccessToken` | `POST /v1/verify-token` | Verify token validity | — |
+
+### MCP Usage Notes
+
+- All tools require `x-api-key` — pass the sandbox key `sandbox-with-json-responses` for testing
+- Parse tools accept either a file upload or a `pdf_url` — not both
+- The CDSL fetch flow requires **two sequential tool calls** (request OTP → verify OTP)
+- Email import requires **multiple sequential calls** (connect → OAuth redirect → list → disconnect)
+- The MCP server does not expose prompts or resources — only tools
 
 ## References
 
