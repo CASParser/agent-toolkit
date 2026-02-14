@@ -64,7 +64,8 @@ For frontend applications, **never expose your API key**. Instead:
 
 ### JavaScript / TypeScript
 - **Frontend:** Use the [Portfolio Connect SDK](portfolio-connect-sdk.md) (`@cas-parser/connect`) for drop-in UI widgets.
-- **Backend:** Use `fetch` or `axios` with the REST API directly. See the Node.js templates for examples.
+- **Official SDK:** [`cas-parser-node`](https://www.npmjs.com/package/cas-parser-node) — TypeScript SDK maintained by the CAS Parser team (Stainless-generated).
+- **Alternative:** Use `fetch` or `axios` with the REST API directly. See the Node.js templates for examples.
 
 ## Request ID Tracking
 

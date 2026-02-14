@@ -51,30 +51,45 @@ curl -O https://raw.githubusercontent.com/casparser/agent-toolkit/main/CLAUDE.md
 
 ### 3. Add MCP Server
 
-The CAS Parser MCP server exposes all API endpoints as tools for AI agents.
+The official [`cas-parser-node-mcp`](https://www.npmjs.com/package/cas-parser-node-mcp) package exposes all API endpoints as tools, with **Code Mode** (agents write TypeScript SDK code in a sandbox) and a **doc search** tool.
 
-#### Claude Code (`~/.claude.json`)
+#### Claude Code (CLI — recommended)
+
+```sh
+claude mcp add cas_parser_node_mcp -e CAS_PARSER_API_KEY=your-api-key -- npx -y cas-parser-node-mcp@latest
+```
+
+#### Claude Code (manual — `~/.claude.json`)
 
 ```json
 {
   "mcpServers": {
-    "casparser": {
+    "cas_parser_node_mcp": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://cas-parser.stlmcp.com/mcp"]
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
     }
   }
 }
 ```
 
-#### Cursor
+#### Cursor (`mcp.json` via Settings > Tools & MCP)
 
-1. Open Cursor Settings (`Cmd + Shift + J` / `Ctrl + Shift + J`)
-2. Navigate to **General > MCP**
-3. Click **+ Add New MCP Server**
-4. Enter:
-   - **Name:** `casparser`
-   - **Type:** `command`
-   - **Command:** `npx -y mcp-remote https://cas-parser.stlmcp.com/mcp`
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "command": "npx",
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
 
 #### Windsurf
 
@@ -82,9 +97,28 @@ The CAS Parser MCP server exposes all API endpoints as tools for AI agents.
 2. Navigate to **Cascade > MCP**
 3. Click **Add Server**
 4. Enter:
-   - **Name:** `casparser`
+   - **Name:** `cas_parser_node_mcp`
    - **Type:** `command`
-   - **Command:** `npx -y mcp-remote https://cas-parser.stlmcp.com/mcp`
+   - **Command:** `npx -y cas-parser-node-mcp@latest`
+   - **Env:** `CAS_PARSER_API_KEY=your-api-key`
+
+#### VS Code
+
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "command": "npx",
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+> Use `sandbox-with-json-responses` as the API key for testing.
 
 ### 4. Start Building
 
@@ -149,7 +183,10 @@ Or try specific tasks:
 - [CAS Parser Documentation](https://docs.casparser.in/) — Official docs
 - [API Reference](https://docs.casparser.in/reference) — Interactive API reference
 - [CAS Parser Web Portal](https://app.casparser.in) — Try it online
-- [Portfolio Connect SDK](https://www.npmjs.com/package/@cas-parser/connect) — npm package
+- [Portfolio Connect SDK](https://www.npmjs.com/package/@cas-parser/connect) — Frontend UI widget (npm)
+- [Node.js / TypeScript SDK](https://www.npmjs.com/package/cas-parser-node) — Official TypeScript API client (npm)
+- [Python SDK](https://github.com/CASParser/cas-parser-python) — Official Python API client (GitHub)
+- [MCP Server](https://www.npmjs.com/package/cas-parser-node-mcp) — AI agent tools with Code Mode (npm)
 - [Agents.md](https://agents.md/) — Standard for agent behaviors
 - [Agent Skills Spec](https://agentskills.io/home) — Specification for agent skills
 

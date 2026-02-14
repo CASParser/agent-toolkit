@@ -20,7 +20,7 @@ This is NOT an application codebase — it's a reference toolkit containing temp
 
 ## MCP Server
 
-A live MCP server is available at `https://cas-parser.stlmcp.com/mcp` that exposes all API endpoints as tools. See `AGENTS.md` for configuration instructions.
+The official [`cas-parser-node-mcp`](https://www.npmjs.com/package/cas-parser-node-mcp) package exposes all API endpoints as tools, including **Code Mode** (write TypeScript SDK code in a sandbox) and a doc search tool. See `AGENTS.md` for configuration instructions.
 
 ## When Working on CAS Parser Integrations
 
