@@ -1,3 +1,13 @@
+---
+name: casparser
+description: >
+  CAS Parser is an API platform for parsing Indian financial portfolio documents (CAS PDFs from CDSL, NSDL, CAMS/KFintech
+  and contract notes from brokers like Zerodha, Groww, Upstox, ICICI) into structured JSON. Use when the user needs to
+  integrate portfolio tracking, parse CAS statements, import holdings from Gmail, fetch CAS via CDSL OTP, or add a
+  Portfolio Connect widget to their web app. Includes REST API patterns, a drop-in frontend SDK, and an MCP server with
+  17 live API tools.
+---
+
 # CAS Parser — Skill Guide
 
 ## What is CAS Parser?
