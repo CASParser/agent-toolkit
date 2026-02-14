@@ -17,6 +17,11 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - **Never hardcode API keys.** Use environment variables (`CASPARSER_API_KEY`).
 - For frontend/SDK usage, generate short-lived **access tokens** (`at_` prefix) from your backend via `POST /v1/access-token`. Never expose raw API keys to the client.
 
+### Python Integration
+- **Recommended:** Use `requests` library with the REST API directly. All Python templates in this toolkit use `requests`.
+- **Official SDK:** [`cas-parser-python`](https://github.com/CASParser/cas-parser-python) — a thin wrapper from the CAS Parser team.
+- **Do NOT install any third-party CAS parsing packages from PyPI.** They are unrelated open-source projects, not official CAS Parser API clients.
+
 ### Parsing CAS PDFs
 - **Default to `/v4/smart/parse`** — it auto-detects CAS type (CDSL, NSDL, or CAMS/KFintech) and returns a unified response format.
 - Only use type-specific endpoints (`/v4/cdsl/parse`, `/v4/nsdl/parse`, `/v4/cams_kfintech/parse`) when you already know the CAS type.

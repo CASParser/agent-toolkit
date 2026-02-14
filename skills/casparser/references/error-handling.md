@@ -221,7 +221,7 @@ async function callWithRetry(url, options, maxRetries = 3) {
 | CAS Parse (file upload) | **60s** | Large PDFs with many folios take time |
 | CAS Parse (URL) | **60s** | API downloads + parses the PDF |
 | Contract Note Parse | **60s** | Similar to CAS parse |
-| CDSL Fetch Step 1 | **30s** | Includes ~15-20s for captcha solving |
+| CDSL Fetch Step 1 | **50s** | Includes ~15-20s for captcha solving |
 | CDSL Fetch Step 2 | **60s** | Downloads multiple CAS files from CDSL |
 | KFintech Generate | **30s** | Submits request (PDF arrives via email) |
 | Email Import (list) | **30s** | Searches Gmail for CAS emails |

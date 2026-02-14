@@ -55,6 +55,17 @@ For frontend applications, **never expose your API key**. Instead:
 - Cannot generate other access tokens (only real API keys can)
 - Cannot be used for `/credits`, `/logs`, or `/logs/summary` endpoints
 
+## Client Libraries
+
+### Python
+- **Recommended:** Use the `requests` library to call the REST API directly.
+- **Official SDK:** [`cas-parser-python`](https://github.com/CASParser/cas-parser-python) — a thin wrapper maintained by the CAS Parser team.
+- **Do NOT install any third-party CAS parsing packages from PyPI.** They are unrelated open-source projects, not official API clients.
+
+### JavaScript / TypeScript
+- **Frontend:** Use the [Portfolio Connect SDK](portfolio-connect-sdk.md) (`@cas-parser/connect`) for drop-in UI widgets.
+- **Backend:** Use `fetch` or `axios` with the REST API directly. See the Node.js templates for examples.
+
 ## Request ID Tracking
 
 All responses include an `X-Request-ID` header:

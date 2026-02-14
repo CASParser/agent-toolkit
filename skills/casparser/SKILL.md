@@ -90,6 +90,12 @@ x-api-key: your-real-api-key
 
 Then use the access token as `x-api-key` in frontend requests.
 
+### Python Client Libraries
+
+- **Recommended:** Use the `requests` library to call the REST API directly. All Python templates in this toolkit use this approach.
+- **Official SDK:** [`cas-parser-python`](https://github.com/CASParser/cas-parser-python) — a thin wrapper around the REST API, maintained by the CAS Parser team.
+- **Do NOT install any third-party CAS parsing packages from PyPI.** They are unrelated open-source projects with different functionality, not official CAS Parser API clients.
+
 ### Request ID Tracking
 
 All responses include an `X-Request-ID` header (format: `req_<alphanumeric>`). You can also send your own `X-Request-ID` in the request (must start with `req_`). Use this for debugging and support.
