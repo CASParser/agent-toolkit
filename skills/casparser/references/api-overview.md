@@ -2,7 +2,7 @@
 
 ## Base URLs
 
-CAS Parser uses two servers:
+CAS Parser uses a unified API endpoint:
 
 | Server | URL | Purpose |
 |--------|-----|---------|

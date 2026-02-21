@@ -16,7 +16,7 @@ Credit costs vary by plan. The table below shows typical costs:
 | KFintech CAS Generator | ~2.0 |
 | Email Import (list CAS files) | ~0.2 |
 
-Check your actual credit costs via `POST /credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) do not consume credits.
+Check your actual credit costs via `POST /v1/credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) do not consume credits.
 
 ## Checking Credits
 
