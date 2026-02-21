@@ -14,7 +14,7 @@ import os
 import requests
 
 API_KEY = os.environ.get("CASPARSER_API_KEY", "sandbox-with-json-responses")
-BASE_URL = "https://portfolio-parser.api.casparser.in"
+BASE_URL = "https://api.casparser.in"
 HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 
 

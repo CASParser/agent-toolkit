@@ -7,13 +7,12 @@
 #
 
 API_KEY="${CASPARSER_API_KEY:-sandbox-with-json-responses}"
-CORE_URL="https://portfolio-parser.api.casparser.in"
-AUTH_URL="https://client-apis.casparser.in"
+API_URL="https://api.casparser.in"
 
 # ============================================================
 # 1. Smart Parse CAS PDF (auto-detect type) — FILE UPLOAD
 # ============================================================
-curl -X POST "$CORE_URL/v4/smart/parse" \
+curl -X POST "$API_URL/v4/smart/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/cas.pdf" \
   -F "password=YourPdfPassword"
@@ -21,7 +20,7 @@ curl -X POST "$CORE_URL/v4/smart/parse" \
 # ============================================================
 # 2. Smart Parse CAS PDF — URL INPUT
 # ============================================================
-curl -X POST "$CORE_URL/v4/smart/parse" \
+curl -X POST "$API_URL/v4/smart/parse" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -33,19 +32,19 @@ curl -X POST "$CORE_URL/v4/smart/parse" \
 # 3. Parse specific CAS type (CDSL / NSDL / CAMS_KFintech)
 # ============================================================
 # CDSL
-curl -X POST "$CORE_URL/v4/cdsl/parse" \
+curl -X POST "$API_URL/v4/cdsl/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/cdsl_cas.pdf" \
   -F "password=YourPdfPassword"
 
 # NSDL
-curl -X POST "$CORE_URL/v4/nsdl/parse" \
+curl -X POST "$API_URL/v4/nsdl/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/nsdl_cas.pdf" \
   -F "password=YourPdfPassword"
 
 # CAMS/KFintech
-curl -X POST "$CORE_URL/v4/cams_kfintech/parse" \
+curl -X POST "$API_URL/v4/cams_kfintech/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/cams_cas.pdf" \
   -F "password=YourPdfPassword"
@@ -53,13 +52,13 @@ curl -X POST "$CORE_URL/v4/cams_kfintech/parse" \
 # ============================================================
 # 4. Parse Contract Note
 # ============================================================
-curl -X POST "$CORE_URL/v4/contract_note/parse" \
+curl -X POST "$API_URL/v4/contract_note/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/contract_note.pdf" \
   -F "password=ABCDE1234F"
 
 # With explicit broker type
-curl -X POST "$CORE_URL/v4/contract_note/parse" \
+curl -X POST "$API_URL/v4/contract_note/parse" \
   -H "x-api-key: $API_KEY" \
   -F "pdf_file=@/path/to/contract_note.pdf" \
   -F "password=ABCDE1234F" \
@@ -68,7 +67,7 @@ curl -X POST "$CORE_URL/v4/contract_note/parse" \
 # ============================================================
 # 5. CDSL Fetch — Step 1: Request OTP
 # ============================================================
-curl -X POST "$CORE_URL/v4/cdsl/fetch" \
+curl -X POST "$API_URL/v4/cdsl/fetch" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -81,7 +80,7 @@ curl -X POST "$CORE_URL/v4/cdsl/fetch" \
 # ============================================================
 # 6. CDSL Fetch — Step 2: Verify OTP
 # ============================================================
-curl -X POST "$CORE_URL/v4/cdsl/fetch/SESSION_ID_HERE/verify" \
+curl -X POST "$API_URL/v4/cdsl/fetch/SESSION_ID_HERE/verify" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -92,7 +91,7 @@ curl -X POST "$CORE_URL/v4/cdsl/fetch/SESSION_ID_HERE/verify" \
 # ============================================================
 # 7. KFintech CAS Generator (email mailback)
 # ============================================================
-curl -X POST "$CORE_URL/v4/kfintech/generate" \
+curl -X POST "$API_URL/v4/kfintech/generate" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -106,7 +105,7 @@ curl -X POST "$CORE_URL/v4/kfintech/generate" \
 # ============================================================
 # 8. Email Import — Connect Gmail (get OAuth URL)
 # ============================================================
-curl -X POST "$CORE_URL/v4/inbox/connect" \
+curl -X POST "$API_URL/v4/inbox/connect" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -117,14 +116,14 @@ curl -X POST "$CORE_URL/v4/inbox/connect" \
 # ============================================================
 # 9. Email Import — Check Connection Status
 # ============================================================
-curl -X POST "$CORE_URL/v4/inbox/status" \
+curl -X POST "$API_URL/v4/inbox/status" \
   -H "x-api-key: $API_KEY" \
   -H "x-inbox-token: INBOX_TOKEN_HERE"
 
 # ============================================================
 # 10. Email Import — List CAS Files from Inbox
 # ============================================================
-curl -X POST "$CORE_URL/v4/inbox/cas" \
+curl -X POST "$API_URL/v4/inbox/cas" \
   -H "x-api-key: $API_KEY" \
   -H "x-inbox-token: INBOX_TOKEN_HERE" \
   -H "Content-Type: application/json" \
@@ -137,20 +136,20 @@ curl -X POST "$CORE_URL/v4/inbox/cas" \
 # ============================================================
 # 11. Email Import — Disconnect
 # ============================================================
-curl -X POST "$CORE_URL/v4/inbox/disconnect" \
+curl -X POST "$API_URL/v4/inbox/disconnect" \
   -H "x-api-key: $API_KEY" \
   -H "x-inbox-token: INBOX_TOKEN_HERE"
 
 # ============================================================
 # 12. Check Credits
 # ============================================================
-curl -X POST "$AUTH_URL/credits" \
+curl -X POST "$API_URL/v1/credits" \
   -H "x-api-key: $API_KEY"
 
 # ============================================================
 # 13. Get Usage Logs
 # ============================================================
-curl -X POST "$AUTH_URL/logs" \
+curl -X POST "$API_URL/v1/usage" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -161,7 +160,7 @@ curl -X POST "$AUTH_URL/logs" \
 # ============================================================
 # 14. Get Usage Summary
 # ============================================================
-curl -X POST "$AUTH_URL/logs/summary" \
+curl -X POST "$API_URL/v1/usage/summary" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -171,7 +170,7 @@ curl -X POST "$AUTH_URL/logs/summary" \
 # ============================================================
 # 15. Generate Access Token (for frontend/SDK)
 # ============================================================
-curl -X POST "$AUTH_URL/v1/access-token" \
+curl -X POST "$API_URL/v1/token" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -181,5 +180,5 @@ curl -X POST "$AUTH_URL/v1/access-token" \
 # ============================================================
 # 16. Verify Access Token
 # ============================================================
-curl -X POST "$AUTH_URL/v1/verify-token" \
+curl -X POST "$API_URL/v1/token/verify" \
   -H "x-api-key: at_YOUR_ACCESS_TOKEN_HERE"

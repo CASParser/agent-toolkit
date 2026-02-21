@@ -17,7 +17,7 @@ const path = require("path");
 const FormData = require("form-data");
 
 const API_KEY = process.env.CASPARSER_API_KEY || "sandbox-with-json-responses";
-const BASE_URL = "https://portfolio-parser.api.casparser.in";
+const BASE_URL = "https://api.casparser.in";
 
 /**
  * Parse a CAS PDF file using smart auto-detection.

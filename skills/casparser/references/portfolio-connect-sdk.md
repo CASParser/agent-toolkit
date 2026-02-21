@@ -23,7 +23,7 @@ Your Backend                    Your Frontend                  CAS Parser API
 │ access    │                  │ Connect       │               │ parse        │
 │ token     │                  │ Widget        │◀──result────│              │
 └──────────┘                   └──────────────┘               └──────────────┘
-POST /v1/access-token           Modal UI overlay               Returns unified JSON
+POST /v1/token                  Modal UI overlay               Returns unified JSON
 (uses real API key)             (uses access token)
 ```
 
@@ -88,7 +88,7 @@ function App() {
 
 ```js
 app.post("/api/casparser-token", async (req, res) => {
-  const response = await fetch("https://client-apis.casparser.in/v1/access-token", {
+  const response = await fetch("https://api.casparser.in/v1/token", {
     method: "POST",
     headers: {
       "x-api-key": process.env.CASPARSER_API_KEY,
@@ -109,7 +109,7 @@ app.post("/api/casparser-token", async (req, res) => {
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  const response = await fetch("https://client-apis.casparser.in/v1/access-token", {
+  const response = await fetch("https://api.casparser.in/v1/token", {
     method: "POST",
     headers: {
       "x-api-key": process.env.CASPARSER_API_KEY!,
@@ -132,7 +132,7 @@ export async function POST() {
 @app.route("/api/casparser-token", methods=["POST"])
 def casparser_token():
     response = requests.post(
-        "https://client-apis.casparser.in/v1/access-token",
+        "https://api.casparser.in/v1/token",
         headers={"x-api-key": os.environ["CASPARSER_API_KEY"], "Content-Type": "application/json"},
         json={"expiry_minutes": 60},
     )

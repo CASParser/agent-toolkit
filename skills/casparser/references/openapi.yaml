@@ -8,10 +8,10 @@ info:
     email: sameer@casparser.in
     
 servers:
+  - url: https://api.casparser.in
+    description: Production server
   - url: https://portfolio-parser.api.casparser.in
-    description: Production server (Core APIs)
-  - url: https://client-apis.casparser.in
-    description: Production server (Authorization APIs)
+    description: Legacy production server (still supported)
   - url: http://localhost:5000
     description: Local development server
 
@@ -55,9 +55,9 @@ tags:
 
 paths:
   # ============================================
-  # Authorization Endpoints (client-apis server)
+  # Authorization Endpoints
   # ============================================
-  /credits:
+  /v1/credits:
     post:
       tags:
         - Authorization
@@ -124,7 +124,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /logs:
+  /v1/usage:
     post:
       tags:
         - Authorization
@@ -217,7 +217,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /logs/summary:
+  /v1/usage/summary:
     post:
       tags:
         - Authorization
@@ -297,9 +297,9 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ============================================
-  # Portfolio Connect SDK Endpoints (client-apis server)
+  # Portfolio Connect SDK Endpoints
   # ============================================
-  /v1/access-token:
+  /v1/token:
     post:
       tags:
         - Portfolio Connect
@@ -363,7 +363,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /v1/verify-token:
+  /v1/token/verify:
     post:
       tags:
         - Portfolio Connect

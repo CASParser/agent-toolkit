@@ -10,7 +10,7 @@
  */
 
 const API_KEY = process.env.CASPARSER_API_KEY || "sandbox-with-json-responses";
-const BASE_URL = "https://portfolio-parser.api.casparser.in";
+const BASE_URL = "https://api.casparser.in";
 const HEADERS = { "x-api-key": API_KEY, "Content-Type": "application/json" };
 
 /**

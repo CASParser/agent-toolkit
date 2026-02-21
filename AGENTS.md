@@ -15,7 +15,7 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - All API requests require an `x-api-key` header.
 - Use `sandbox-with-json-responses` as the sandbox API key for development/testing.
 - **Never hardcode API keys.** Use environment variables (`CASPARSER_API_KEY`).
-- For frontend/SDK usage, generate short-lived **access tokens** (`at_` prefix) from your backend via `POST /v1/access-token`. Never expose raw API keys to the client.
+- For frontend/SDK usage, generate short-lived **access tokens** (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the client.
 
 ### Python Integration
 - **Recommended:** Use `requests` library with the REST API directly. All Python templates in this toolkit use `requests`.
@@ -57,7 +57,7 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - The widget handles file upload, password entry, Gmail inbox import, and CDSL OTP fetch — all in a single UI.
 - Works with React, Next.js, or vanilla HTML/JS (via UMD bundle).
 - Install: `npm install @cas-parser/connect`
-- Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/access-token`. Never expose raw API keys to the frontend.
+- Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the frontend.
 - See [`references/portfolio-connect-sdk.md`](skills/casparser/references/portfolio-connect-sdk.md) for full integration guide.
 
 ### PDF Requirements
@@ -83,9 +83,9 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - All responses include an `X-Request-ID` header (`req_*` format) — use it for support requests.
 
 ### Credits & Billing
-- Each API call consumes credits. Check quota with `POST /credits`.
+- Each API call consumes credits. Check quota with `POST /v1/credits`.
 - Different features cost different credits (e.g., parsing = 1 credit, CDSL fetch = 1.5 credits).
-- Monitor usage with `POST /logs` and `POST /logs/summary`.
+- Monitor usage with `POST /v1/usage` and `POST /v1/usage/summary`.
 
 ## Before Implementing
 

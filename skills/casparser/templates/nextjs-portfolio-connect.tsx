@@ -23,7 +23,7 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  const response = await fetch("https://client-apis.casparser.in/v1/access-token", {
+  const response = await fetch("https://api.casparser.in/v1/token", {
     method: "POST",
     headers: {
       "x-api-key": process.env.CASPARSER_API_KEY!,

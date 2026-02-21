@@ -16,16 +16,18 @@ Credit costs vary by plan. The table below shows typical costs:
 | KFintech CAS Generator | ~2.0 |
 | Email Import (list CAS files) | ~0.2 |
 
-Check your actual credit costs via `POST /credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) do not consume credits.
+Check your actual credit costs via `POST /v1/credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) do not consume credits.
 
 ## Checking Credits
 
 ```
-POST https://client-apis.casparser.in/credits
+POST https://api.casparser.in/v1/credits
 x-api-key: your-api-key
 ```
 
 **Note:** Must use your real API key, not an access token.
+
+> Legacy path `/credits` is still supported for backward compatibility.
 
 Response:
 ```json
@@ -51,7 +53,7 @@ Response:
 ### Detailed Logs
 
 ```
-POST https://client-apis.casparser.in/logs
+POST https://api.casparser.in/v1/usage
 x-api-key: your-api-key
 Content-Type: application/json
 
@@ -83,7 +85,7 @@ Response:
 ### Usage Summary
 
 ```
-POST https://client-apis.casparser.in/logs/summary
+POST https://api.casparser.in/v1/usage/summary
 x-api-key: your-api-key
 Content-Type: application/json
 
@@ -118,7 +120,7 @@ The sandbox key `sandbox-with-json-responses` does **not** consume credits. It r
 
 1. **Check credits on startup** — Verify you have credits before serving users
 2. **Set up alerts** — Monitor `remaining` and alert when low
-3. **Track by feature** — Use `/logs/summary` to understand usage patterns
+3. **Track by feature** — Use `/v1/usage/summary` to understand usage patterns
 4. **Use request IDs** — Correlate logs with your application's request tracking
 
 ## Related Templates
