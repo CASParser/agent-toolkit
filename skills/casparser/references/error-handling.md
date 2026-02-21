@@ -54,8 +54,8 @@ HTTP Status: `500`
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `API key is missing` | No `x-api-key` header | Add `x-api-key` header to request |
-| `API quota exceeded or invalid API key` | Invalid key or out of credits | Verify API key, check credits via `POST /credits` |
-| `Access tokens cannot be used for credits API` | Using `at_` token for admin endpoints | Use your real API key for `/credits`, `/logs`, `/logs/summary` |
+| `API quota exceeded or invalid API key` | Invalid key or out of credits | Verify API key, check credits via `POST /v1/credits` |
+| `Access tokens cannot be used for credits API` | Using `at_` token for admin endpoints | Use your real API key for `/v1/credits`, `/v1/usage`, `/v1/usage/summary` |
 | `Cannot create access token from access token` | Trying to nest token generation | Use your real API key to generate access tokens |
 
 ### PDF Parsing

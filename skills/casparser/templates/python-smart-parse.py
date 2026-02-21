@@ -16,7 +16,7 @@ import sys
 import requests
 
 API_KEY = os.environ.get("CASPARSER_API_KEY", "sandbox-with-json-responses")
-BASE_URL = "https://portfolio-parser.api.casparser.in"
+BASE_URL = "https://api.casparser.in"
 
 
 def smart_parse_file(pdf_path: str, password: str) -> dict:

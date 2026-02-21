@@ -6,8 +6,9 @@ CAS Parser uses two servers:
 
 | Server | URL | Purpose |
 |--------|-----|---------|
-| **Core APIs** | `https://portfolio-parser.api.casparser.in` | Parsing, fetching, generating CAS documents |
-| **Auth APIs** | `https://client-apis.casparser.in` | Credits, access tokens, usage logs |
+| **API** | `https://api.casparser.in` | All CAS Parser APIs |
+
+> **Backward Compatibility:** The legacy URL `https://portfolio-parser.api.casparser.in` continues to work and is fully supported. Existing integrations do not need to be updated.
 
 ## Authentication
 
@@ -32,7 +33,7 @@ For frontend applications, **never expose your API key**. Instead:
 
 1. Generate a short-lived access token from your backend:
    ```
-   POST https://client-apis.casparser.in/v1/access-token
+   POST https://api.casparser.in/v1/token
    x-api-key: your-real-api-key
    Content-Type: application/json
 
@@ -53,7 +54,7 @@ For frontend applications, **never expose your API key**. Instead:
 **Access token rules:**
 - Maximum validity: 60 minutes
 - Cannot generate other access tokens (only real API keys can)
-- Cannot be used for `/credits`, `/logs`, or `/logs/summary` endpoints
+- Cannot be used for `/v1/credits`, `/v1/usage`, or `/v1/usage/summary` endpoints
 
 ## Client Libraries
 
@@ -114,7 +115,7 @@ Rate limits are based on your plan. If you exceed your quota:
 - Response status: `403 Forbidden`
 - Body: `{"status": "error", "msg": "Authentication failed: API quota exceeded..."}`
 
-Check your current quota with `POST /credits`.
+Check your current quota with `POST /v1/credits`.
 
 ## Endpoint Summary
 
@@ -132,8 +133,8 @@ Check your current quota with `POST /credits`.
 | `/v4/inbox/status` | POST | Core | Email Import — Check status |
 | `/v4/inbox/cas` | POST | Core | Email Import — List CAS files |
 | `/v4/inbox/disconnect` | POST | Core | Email Import — Revoke access |
-| `/credits` | POST | Auth | Check API credits |
-| `/logs` | POST | Auth | Get usage logs |
-| `/logs/summary` | POST | Auth | Get usage summary |
-| `/v1/access-token` | POST | Auth | Generate access token |
-| `/v1/verify-token` | POST | Auth | Verify access token |
+| `/v1/credits` | POST | Auth | Check API credits |
+| `/v1/usage` | POST | Auth | Get usage logs |
+| `/v1/usage/summary` | POST | Auth | Get usage summary |
+| `/v1/token` | POST | Auth | Generate access token |
+| `/v1/token/verify` | POST | Auth | Verify access token |

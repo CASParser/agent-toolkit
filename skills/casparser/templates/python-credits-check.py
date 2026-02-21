@@ -11,14 +11,14 @@ import os
 import requests
 
 API_KEY = os.environ.get("CASPARSER_API_KEY", "sandbox-with-json-responses")
-AUTH_BASE_URL = "https://client-apis.casparser.in"
+AUTH_BASE_URL = "https://api.casparser.in"
 HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 
 
 def check_credits() -> dict:
     """Check remaining API credits and enabled features."""
     response = requests.post(
-        f"{AUTH_BASE_URL}/credits",
+        f"{AUTH_BASE_URL}/v1/credits",
         headers=HEADERS,
         timeout=10,
     )
@@ -52,7 +52,7 @@ def get_usage_logs(start_time: str = None, end_time: str = None, limit: int = 50
         payload["end_time"] = end_time
 
     response = requests.post(
-        f"{AUTH_BASE_URL}/logs",
+        f"{AUTH_BASE_URL}/v1/usage",
         headers=HEADERS,
         json=payload,
         timeout=10,
@@ -83,7 +83,7 @@ def get_usage_summary(start_time: str = None, end_time: str = None) -> dict:
         payload["end_time"] = end_time
 
     response = requests.post(
-        f"{AUTH_BASE_URL}/logs/summary",
+        f"{AUTH_BASE_URL}/v1/usage/summary",
         headers=HEADERS,
         json=payload if payload else None,
         timeout=10,

@@ -11,7 +11,7 @@
  */
 
 const API_KEY = process.env.CASPARSER_API_KEY; // Must be a real API key, not an access token
-const AUTH_BASE_URL = "https://client-apis.casparser.in";
+const AUTH_BASE_URL = "https://api.casparser.in";
 
 if (!API_KEY) {
   throw new Error("CASPARSER_API_KEY environment variable is required");
@@ -24,7 +24,7 @@ if (!API_KEY) {
  * @returns {Promise<{accessToken: string, expiresIn: number}>}
  */
 async function generateAccessToken(expiryMinutes = 60) {
-  const response = await fetch(`${AUTH_BASE_URL}/v1/access-token`, {
+  const response = await fetch(`${AUTH_BASE_URL}/v1/token`, {
     method: "POST",
     headers: {
       "x-api-key": API_KEY,
@@ -52,7 +52,7 @@ async function generateAccessToken(expiryMinutes = 60) {
  * @returns {Promise<{valid: boolean, maskedApiKey?: string, error?: string}>}
  */
 async function verifyToken(token) {
-  const response = await fetch(`${AUTH_BASE_URL}/v1/verify-token`, {
+  const response = await fetch(`${AUTH_BASE_URL}/v1/token/verify`, {
     method: "POST",
     headers: {
       "x-api-key": token,

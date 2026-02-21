@@ -75,8 +75,9 @@ The caller passes the password as-is; the API uses it to unlock the PDF.
 
 | Server | URL | Purpose |
 |--------|-----|---------|
-| Core APIs | `https://portfolio-parser.api.casparser.in` | Parsing, fetching, generating CAS |
-| Auth APIs | `https://client-apis.casparser.in` | Credits, access tokens, logs |
+| API | `https://api.casparser.in` | All CAS Parser APIs |
+
+> **Backward Compatibility:** The legacy URL `https://portfolio-parser.api.casparser.in` continues to work and is fully supported.
 
 ### Authentication
 
@@ -92,7 +93,7 @@ x-api-key: sandbox-with-json-responses
 
 For frontend applications, generate short-lived access tokens from your backend:
 ```
-POST /v1/access-token
+POST /v1/token
 x-api-key: your-real-api-key
 
 → { "access_token": "at_eyJ...", "expires_in": 3600 }
@@ -203,7 +204,7 @@ npm install @cas-parser/connect
 ```tsx
 import { PortfolioConnect } from "@cas-parser/connect";
 
-// Generate accessToken from your backend (POST /v1/access-token)
+// Generate accessToken from your backend (POST /v1/token)
 <PortfolioConnect
   accessToken={token}
   enableCdslFetch={true}
@@ -240,7 +241,7 @@ Upload a PDF → get structured JSON. Use `/v4/smart/parse`.
 import requests, os
 
 response = requests.post(
-    "https://portfolio-parser.api.casparser.in/v4/smart/parse",
+    "https://api.casparser.in/v4/smart/parse",
     headers={"x-api-key": os.environ["CASPARSER_API_KEY"]},
     files={"pdf_file": open("cas.pdf", "rb")},
     data={"password": "your-pdf-password"},
@@ -309,11 +310,11 @@ The MCP server is auto-generated from the OpenAPI spec. Each tool maps to an API
 | `inboxStatus` | `GET /v4/inbox/status` | Check inbox connection status | `x-inbox-token` header |
 | `inboxCasList` | `GET /v4/inbox/cas` | List CAS files from inbox | `x-inbox-token` header, optional filters |
 | `inboxDisconnect` | `POST /v4/inbox/disconnect` | Revoke Gmail access | `x-inbox-token` header |
-| `checkCredits` | `POST /credits` | Check remaining API quota | — |
-| `getUsageLogs` | `POST /logs` | Get detailed usage logs | optional `from_date`, `to_date` |
-| `getUsageSummary` | `POST /logs/summary` | Get aggregated usage stats | optional `from_date`, `to_date` |
-| `generateAccessToken` | `POST /v1/access-token` | Generate frontend token | optional `expiry_minutes` |
-| `verifyAccessToken` | `POST /v1/verify-token` | Verify token validity | — |
+| `checkCredits` | `POST /v1/credits` | Check remaining API quota | — |
+| `getUsageLogs` | `POST /v1/usage` | Get detailed usage logs | optional `start_time`, `end_time`, `limit` |
+| `getUsageSummary` | `POST /v1/usage/summary` | Get aggregated usage stats | optional `start_time`, `end_time` |
+| `generateAccessToken` | `POST /v1/token` | Generate frontend token | optional `expiry_minutes` |
+| `verifyAccessToken` | `POST /v1/token/verify` | Verify token validity | — |
 
 ### MCP Usage Notes
 
