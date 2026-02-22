@@ -1,0 +1,157 @@
+---
+title: MutualFundFolio
+openapi-schema: MutualFundFolio
+---
+
+The `MutualFundFolio` schema represents a mutual fund folio (account) extracted from a CAS statement.
+
+## Overview
+
+A folio contains one or more mutual fund schemes invested with the same AMC (Asset Management Company). Each folio has:
+- **Schemes** — Individual mutual fund schemes with units and NAV
+- **Transactions** — Purchase, redemption, dividend transactions
+- **Gains** — Capital gains calculations (absolute and percentage)
+
+**Sources:** CAMS or KFintech CAS statements.
+
+## Key Fields
+
+### Folio Details
+
+| Field | Description |
+|-------|-------------|
+| `folio_number` | Unique folio identifier (e.g., "12345/67") |
+| `amc` | Asset Management Company name |
+| `rta` | Registrar (CAMS or KFintech) |
+| `investor_name` | Primary investor name |
+| `pan` | PAN of the folio holder |
+| `total_value` | Current market value of all schemes |
+| `total_cost` | Total invested amount |
+
+### Schemes
+
+Each folio contains an array of schemes:
+
+```json
+{
+  "schemes": [
+    {
+      "scheme_name": "HDFC Equity Fund - Direct Plan - Growth",
+      "isin": "INF179K01EQ3",
+      "advisor": "Direct",
+      "units": 1234.567,
+      "nav": 450.25,
+      "value": 555808.41,
+      "cost": 500000.00,
+      "gain": {
+        "absolute": 55808.41,
+        "percentage": 11.16
+      }
+    }
+  ]
+}
+```
+
+### Transactions
+
+Transaction history for purchases, redemptions, and dividends:
+
+```json
+{
+  "transactions": [
+    {
+      "date": "2025-01-15",
+      "description": "Purchase",
+      "units": 100.50,
+      "nav": 425.75,
+      "amount": 42808.00
+    }
+  ]
+}
+```
+
+## Example
+
+```json
+{
+  "folio_number": "12345/67",
+  "amc": "HDFC Mutual Fund",
+  "rta": "CAMS",
+  "investor_name": "John Doe",
+  "pan": "ABCDE1234F",
+  "total_value": 1255808.41,
+  "total_cost": 1100000.00,
+  "schemes": [
+    {
+      "scheme_name": "HDFC Equity Fund - Direct Plan - Growth",
+      "isin": "INF179K01EQ3",
+      "advisor": "Direct",
+      "units": 1234.567,
+      "nav": 450.25,
+      "value": 555808.41,
+      "cost": 500000.00,
+      "gain": {
+        "absolute": 55808.41,
+        "percentage": 11.16
+      },
+      "transactions": [
+        {
+          "date": "2025-01-15",
+          "description": "Purchase",
+          "units": 100.50,
+          "nav": 425.75,
+          "amount": 42808.00
+        },
+        {
+          "date": "2025-01-20",
+          "description": "Dividend Payout",
+          "amount": 1250.00
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Related Schemas
+
+- [`MutualFundScheme`](/learn/schemas/mutual-fund-scheme) — Individual scheme structure
+- [`Transaction`](/learn/schemas/transaction) — Transaction details
+- [`UnifiedResponse`](/learn/schemas/unified-response) — Parent response schema
+
+## Usage
+
+Access mutual fund folios from the parsed response:
+
+```python
+response = requests.post(
+    "https://api.casparser.in/v4/cams_kfintech/parse",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    files={"file": open("cas.pdf", "rb")},
+    data={"password": "ABCDE1234F"}
+)
+
+data = response.json()
+
+for folio in data['mutual_funds']:
+    print(f"Folio: {folio['folio_number']} ({folio['amc']})")
+    print(f"Total Value: ₹{folio['total_value']:,.2f}")
+    
+    for scheme in folio['schemes']:
+        print(f"  {scheme['scheme_name']}: ₹{scheme['value']:,.2f}")
+        print(f"  Gain: {scheme['gain']['percentage']:.2f}%")
+```
+
+## Notes
+
+**Direct vs Regular Plans:**
+- The `advisor` field indicates "Direct" or the distributor name
+- Direct plans have lower expense ratios (no distributor commission)
+
+**CAMS vs KFintech:**
+- `rta` field specifies which registrar maintains the folio
+- Both follow the same unified structure in the response
+
+**Demat Mutual Funds:**
+- Mutual funds held in demat form appear in `demat_accounts[].holdings.demat_mutual_funds`
+- Non-demat folios appear in the top-level `mutual_funds` array

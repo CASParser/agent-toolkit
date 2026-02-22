@@ -16,7 +16,7 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:sameer@casparser.in"
+        "href": "https://casparser.in/contact"
       }
     ],
     "primary": {
@@ -51,6 +51,14 @@
               "learn/authentication",
               "learn/response-schema",
               "learn/error-handling"
+            ]
+          },
+          {
+            "group": "Data Models",
+            "pages": [
+              "learn/schemas/unified-response",
+              "learn/schemas/demat-account",
+              "learn/schemas/mutual-fund-folio"
             ]
           },
           {
@@ -103,7 +111,8 @@
             "group": "Resources",
             "pages": [
               "knowledge-base/faq",
-              "knowledge-base/use-cases"
+              "knowledge-base/use-cases",
+              "knowledge-base/on-premise"
             ]
           }
         ]

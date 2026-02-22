@@ -1,0 +1,143 @@
+---
+title: DematAccount
+openapi-schema: DematAccount
+---
+
+The `DematAccount` schema represents a single demat account (NSDL or CDSL) extracted from a CAS statement.
+
+## Overview
+
+Demat accounts hold various asset classes:
+- **Equities** — Stocks, ETFs
+- **Corporate Bonds** — Company bonds with coupon rates
+- **Government Securities** — Sovereign Gold Bonds, T-Bills, G-Secs
+- **AIFs** — Alternative Investment Funds
+- **Demat Mutual Funds** — Mutual funds held in demat form
+
+## Key Fields
+
+### Account Identifiers
+
+| Field | Description |
+|-------|-------------|
+| `demat_type` | `NSDL` or `CDSL` |
+| `dp_id` | Depository Participant ID |
+| `dp_name` | DP name (e.g., "ZERODHA", "ICICI DIRECT") |
+| `client_id` | Client ID / Account number |
+| `bo_id` | Beneficiary Owner ID (CDSL only, 16-digit) |
+
+### Holdings
+
+The `holdings` object contains arrays of different asset types:
+
+```json
+{
+  "holdings": {
+    "equities": [...],
+    "corporate_bonds": [...],
+    "government_securities": [...],
+    "aifs": [...],
+    "demat_mutual_funds": [...]
+  }
+}
+```
+
+Each holding type has its own schema — see related schemas below.
+
+### Linked Holders
+
+For joint accounts, the `linked_holders` array contains additional account holder details:
+
+```json
+{
+  "linked_holders": [
+    {
+      "name": "Jane Doe",
+      "pan": "FGHIJ5678K"
+    }
+  ]
+}
+```
+
+### Additional Info
+
+CDSL accounts include extra metadata in `additional_info`:
+
+| Field | Description |
+|-------|-------------|
+| `bo_status` | Account status (Active, Dormant, etc.) |
+| `bo_type` | Account type (Individual, Corporate, etc.) |
+| `bsda` | Basic Services Demat Account flag |
+| `nominee` | Nominee details |
+| `email` | Email registered with DP |
+
+## Example
+
+```json
+{
+  "demat_type": "CDSL",
+  "dp_id": "12081600",
+  "dp_name": "ZERODHA BROKING LIMITED",
+  "client_id": "1234567890123456",
+  "bo_id": "1208160012345678",
+  "value": 850000.50,
+  "linked_holders": [
+    {
+      "name": "John Doe",
+      "pan": "ABCDE1234F"
+    }
+  ],
+  "holdings": {
+    "equities": [
+      {
+        "isin": "INE002A01018",
+        "name": "RELIANCE INDUSTRIES LTD",
+        "units": 100,
+        "value": 250000.00
+      }
+    ],
+    "corporate_bonds": [
+      {
+        "isin": "INE123B07123",
+        "name": "HDFC BANK LTD",
+        "units": 10,
+        "value": 100000.00,
+        "additional_info": {
+          "coupon_rate": "7.5%",
+          "maturity_date": "2030-12-31"
+        }
+      }
+    ]
+  },
+  "additional_info": {
+    "bo_status": "Active",
+    "bsda": "No"
+  }
+}
+```
+
+## Related Schemas
+
+- [`Equity`](/learn/schemas/equity) — Equity holding structure
+- [`CorporateBond`](/learn/schemas/corporate-bond) — Corporate bond structure
+- [`UnifiedResponse`](/learn/schemas/unified-response) — Parent response schema
+
+## Usage
+
+Access demat accounts from the parsed response:
+
+```python
+response = requests.post(
+    "https://api.casparser.in/v4/smart/parse",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    files={"file": open("cas.pdf", "rb")},
+    data={"password": "ABCDE1234F"}
+)
+
+data = response.json()
+
+for account in data['demat_accounts']:
+    print(f"DP: {account['dp_name']}")
+    print(f"Value: ₹{account['value']:,.2f}")
+    print(f"Equities: {len(account['holdings']['equities'])}")
+```
