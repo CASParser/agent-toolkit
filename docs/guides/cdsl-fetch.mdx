@@ -5,13 +5,13 @@ description: Fetch CAS PDF files directly from CDSL via OTP verification. Return
 
 ## Overview
 
-CDSL OTP Fetch retrieves eCAS (electronic Consolidated Account Statement) PDF files directly from CDSL's EASIEST portal via OTP authentication.
+CDSL OTP Fetch retrieves eCAS (electronic Consolidated Account Statement) PDF files directly from CDSL's CAS portal (https://www.cdslindia.com/cas/) via OTP authentication.
 
 ```mermaid
 sequenceDiagram
     participant App as Your App
     participant API as CAS Parser<br/>Fetch API
-    participant CDSL as CDSL<br/>EASIEST
+    participant CDSL as CDSL<br/>CAS Portal
     participant User as User Phone
     
     App->>API: Step 1: Request OTP
@@ -37,6 +37,11 @@ sequenceDiagram
 - PAN number
 - CDSL BO ID (16-digit Client ID)
 - Date of birth
+- **At least one CDSL demat account** (required to access CDSL CAS portal)
+
+<Note>
+  **Portal access requirement:** Only users with at least one CDSL demat account can access the CDSL CAS portal. NSDL does not have an equivalent OTP-based fetch portal yet.
+</Note>
 
 ## Two-step flow
 
