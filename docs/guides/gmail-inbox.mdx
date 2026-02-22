@@ -7,11 +7,11 @@ description: Import CAS files directly from user email inboxes via OAuth. No pas
 
 Gmail Inbox Import lets users import CAS statements directly from their email — no file uploads or password sharing needed.
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    User     │────▶│   OAuth     │────▶│  CAS Parser │────▶│   Your App  │
-│   Gmail     │     │   Consent   │     │   Inbox API │     │   Callback  │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+flowchart LR
+    A[User<br/>Gmail] --> B[OAuth<br/>Consent]
+    B --> C[CAS Parser<br/>Inbox API]
+    C --> D[Your App<br/>Callback]
 ```
 
 **Security features:**
@@ -130,7 +130,7 @@ requests.post(
 | Operation | Credits |
 |-----------|---------|
 | Connect (OAuth) | Free |
-| List files (`/v4/inbox/cas`) | 0.2 per request |
+| List files (`/v4/inbox/cas`) | 0.2 per pull (any number of files) |
 | Parse file (`/v4/smart/parse`) | 1.0 per file |
 
 ## Using with Portfolio Connect SDK

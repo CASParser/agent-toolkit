@@ -7,22 +7,20 @@ description: Fetch CAS PDF files directly from CDSL via OTP verification. Return
 
 CDSL OTP Fetch retrieves CAS PDF files directly from CDSL's EASIEST portal via OTP authentication.
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Your App   │────▶│  CAS Parser │────▶│    CDSL     │────▶│  User Phone │
-│  (Step 1)   │     │  Fetch API  │     │  EASIEST    │     │  (OTP SMS)  │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-       │                                                           │
-       │                    ┌─────────────┐                        │
-       └───────────────────▶│  Your App   │◀───────────────────────┘
-                            │  (Step 2)   │    User enters OTP
-                            └─────────────┘
-                                   │
-                                   ▼
-                          CAS PDF Download URLs
-                                   │
-                                   ▼
-                          Parse with /v4/smart/parse
+```mermaid
+sequenceDiagram
+    participant App as Your App
+    participant API as CAS Parser<br/>Fetch API
+    participant CDSL as CDSL<br/>EASIEST
+    participant User as User Phone
+    
+    App->>API: Step 1: Request OTP
+    API->>CDSL: Trigger OTP
+    CDSL->>User: SMS with OTP
+    User->>App: User enters OTP
+    App->>API: Step 2: Verify OTP
+    API-->>App: CAS PDF URLs
+    Note over App: Parse each URL with<br/>/v4/smart/parse
 ```
 
 **What you get:**

@@ -16,7 +16,7 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:sameer@casparser.in"
+        "href": "https://casparser.in/contact"
       }
     ],
     "primary": {
@@ -103,7 +103,8 @@
             "group": "Resources",
             "pages": [
               "knowledge-base/faq",
-              "knowledge-base/use-cases"
+              "knowledge-base/use-cases",
+              "knowledge-base/on-premise"
             ]
           }
         ]

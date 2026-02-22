@@ -54,11 +54,10 @@ For frontend/SDK applications, use short-lived access tokens instead of exposing
 
 ### Token Flow
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Backend   │────▶│  CAS Parser │────▶│  Frontend   │
-│  (API Key)  │     │   /v1/token │     │ (at_ token) │
-└─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+flowchart LR
+    A[Backend<br/>API Key] --> B[CAS Parser<br/>/v1/token]
+    B --> C[Frontend<br/>at_ token]
 ```
 
 ### Generate Access Token

@@ -49,7 +49,7 @@ docs/
 
 ## Navigation Structure
 
-**4 Tabs:**
+**5 Tabs:**
 1. **Documentation** — Getting Started, Quickstart, Learn, Resources
 2. **API Reference** — Auto-generated from OpenAPI (all endpoints)
 3. **Portfolio Connect SDK** — Frontend widget documentation
@@ -79,7 +79,7 @@ npx mintlify dev
 - **Sentences**: One idea per sentence
 - **Headings**: Sentence case
 - **Code**: Backticks for paths, commands, variables
-- **Diagrams**: ASCII art for data flows
+- **Diagrams**: Mermaid flowcharts and sequence diagrams
 - **Examples**: Always include Python, Node.js, cURL
 
 ## OpenAPI Integration
