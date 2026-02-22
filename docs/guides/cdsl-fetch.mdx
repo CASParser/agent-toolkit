@@ -5,7 +5,7 @@ description: Fetch CAS PDF files directly from CDSL via OTP verification. Return
 
 ## Overview
 
-CDSL OTP Fetch retrieves CAS PDF files directly from CDSL's EASIEST portal via OTP authentication.
+CDSL OTP Fetch retrieves eCAS (electronic Consolidated Account Statement) PDF files directly from CDSL's EASIEST portal via OTP authentication.
 
 ```mermaid
 sequenceDiagram
@@ -24,9 +24,14 @@ sequenceDiagram
 ```
 
 **What you get:**
-- Download URLs for up to 6 monthly CAS PDFs
-- Direct from CDSL depository
+- Download URLs for up to 6 monthly eCAS PDFs
+- **All holdings:** Demat + Non-Demat assets (stocks, bonds, mutual funds, AIFs, etc.)
+- **Cross-depository:** Includes holdings from **both CDSL and NSDL** accounts
 - No manual portal login required
+
+<Warning>
+  **Critical:** CDSL eCAS statements are **not limited to CDSL demat accounts**. They contain a consolidated view of all holdings across **both CDSL and NSDL** depositories, including both demat and non-demat assets. Similarly, NSDL eCAS also contains holdings from both depositories.
+</Warning>
 
 **What you need:**
 - PAN number
@@ -207,7 +212,7 @@ for cas_data in cas_files:
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `Invalid PAN format` | PAN doesn't match pattern | Validate PAN: `[A-Z]{5}[0-9]{4}[A-Z]` |
-| `No CDSL account found` | PAN not registered with CDSL | User may only have NSDL demat |
+| `No CDSL account found` | PAN not registered with CDSL | User doesn't have CDSL BO ID (may only use NSDL) |
 | `OTP expired` | OTP older than 5 minutes | Request new OTP (repeat Step 1) |
 | `Invalid OTP` | Wrong OTP entered | Ask user to re-enter |
 
