@@ -1,0 +1,121 @@
+---
+title: Python Quickstart
+description: Parse your first CAS PDF with Python in 5 lines of code.
+---
+
+## Prerequisites
+
+- Python 3.7+
+- [Get an API key](https://app.casparser.in/developers)
+- Have a CAS PDF ready (or use sandbox key)
+
+## 1. Install
+
+```bash
+pip install requests
+```
+
+## 2. Parse a CAS PDF
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v4/smart/parse",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    files={"file": open("cas.pdf", "rb")},
+    data={"password": "YOUR_PAN_NUMBER"}
+)
+
+data = response.json()
+print(f"Investor: {data['investor']['name']}")
+print(f"Total Value: ₹{data['summary']['total_value']:,.0f}")
+```
+
+## 3. Try it yourself
+
+<Tip>
+  Use `sandbox-with-json-responses` as your API key to test without consuming credits.
+</Tip>
+
+## Response structure
+
+```json
+{
+  "status": "success",
+  "investor": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "pan": "ABCDE1234F",
+    "mobile": "9876543210"
+  },
+  "summary": {
+    "total_value": 1234567.89,
+    "accounts": {
+      "demat_accounts": 2,
+      "mutual_fund_folios": 5,
+      "insurance_policies": 1,
+      "nps_accounts": 1
+    }
+  },
+  "demat_accounts": [...],
+  "mutual_funds": [...],
+  "insurance": [...],
+  "nps": [...]
+}
+```
+
+## Full example with error handling
+
+```python
+import requests
+import os
+
+API_KEY = os.environ.get("CASPARSER_API_KEY")
+API_URL = "https://api.casparser.in/v4/smart/parse"
+
+def parse_cas(pdf_path: str, password: str) -> dict:
+    """Parse a CAS PDF and return structured data."""
+    
+    with open(pdf_path, "rb") as f:
+        response = requests.post(
+            API_URL,
+            headers={"x-api-key": API_KEY},
+            files={"file": f},
+            data={"password": password},
+            timeout=60
+        )
+    
+    result = response.json()
+    
+    if result.get("status") == "failed":
+        raise Exception(f"Parsing failed: {result.get('msg')}")
+    
+    return result
+
+# Usage
+if __name__ == "__main__":
+    data = parse_cas("cas.pdf", "ABCDE1234F")
+    
+    # Print summary
+    print(f"Investor: {data['investor']['name']}")
+    print(f"PAN: {data['investor']['pan']}")
+    print(f"Total Value: ₹{data['summary']['total_value']:,.2f}")
+    
+    # Print holdings
+    for account in data.get("demat_accounts", []):
+        print(f"\nDemat Account: {account['dp_id']}")
+        for equity in account.get("equities", []):
+            print(f"  {equity['name']}: {equity['units']} units @ ₹{equity['value']:,.2f}")
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Gmail Import" icon="envelope" href="/guides/gmail-inbox">
+    Import CAS directly from user email
+  </Card>
+  <Card title="CDSL OTP Fetch" icon="shield-check" href="/guides/cdsl-fetch">
+    Real-time holdings via OTP
+  </Card>
+</CardGroup>

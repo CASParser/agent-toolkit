@@ -1,0 +1,149 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "CAS Parser",
+  "colors": {
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
+  },
+  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:sameer@casparser.in"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get API Key",
+      "href": "https://app.casparser.in/developers"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Quickstart",
+            "pages": [
+              "quickstart/python",
+              "quickstart/nodejs",
+              "quickstart/curl"
+            ]
+          },
+          {
+            "group": "Learn",
+            "pages": [
+              "learn/authentication",
+              "learn/response-schema",
+              "learn/error-handling"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/sandbox",
+              "resources/security",
+              "resources/support"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/introduction"]
+          }
+        ],
+        "openapi": "/api-reference/openapi.yaml"
+      },
+      {
+        "tab": "Portfolio Connect SDK",
+        "groups": [
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/portfolio-connect",
+              "sdk/configuration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Knowledge Base",
+        "groups": [
+          {
+            "group": "Product Guides",
+            "pages": [
+              "guides/parsing",
+              "guides/contract-notes",
+              "guides/cas-generator",
+              "guides/gmail-inbox",
+              "guides/cdsl-fetch",
+              "guides/mcp-server"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "knowledge-base/faq",
+              "knowledge-base/use-cases"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Release Notes",
+        "groups": [
+          {
+            "group": "Updates",
+            "pages": [
+              "release-notes"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Web Portal",
+          "href": "https://app.casparser.in",
+          "icon": "browser"
+        },
+        {
+          "anchor": "Agent Toolkit",
+          "href": "https://github.com/CASParser/agent-toolkit",
+          "icon": "robot"
+        },
+        {
+          "anchor": "Ask AI",
+          "href": "https://chatgpt.com/g/g-698778fc35f881919a8e57c537e211c6-india-portfoliogpt-powered-by-casparser",
+          "icon": "sparkles"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/CASParser",
+      "linkedin": "https://linkedin.com/company/cas-parser"
+    }
+  }
+}

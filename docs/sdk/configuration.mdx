@@ -1,0 +1,299 @@
+---
+title: SDK Configuration
+description: Complete reference for Portfolio Connect SDK props, events, error handling, and framework integration.
+---
+
+## Props Reference
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `accessToken` | `string` | Yes | Access token from `/v1/token` (starts with `at_`) |
+| `config` | `object` | No | Feature configuration |
+| `prefill` | `object` | No | Pre-fill form fields |
+| `onSuccess` | `function` | No | Called when import completes |
+| `onError` | `function` | No | Called on error |
+| `onClose` | `function` | No | Called when modal closes |
+
+## Config Options
+
+```typescript
+interface Config {
+  // Enable/disable import methods
+  enableUpload?: boolean;      // PDF upload (default: true)
+  enableGenerator?: boolean;   // KFintech email request (default: false)
+  enableCdslFetch?: boolean;   // CDSL OTP fetch (default: false)
+  enableInbox?: boolean;       // Gmail inbox import (default: false)
+  
+  // UI customization
+  primaryColor?: string;       // Hex color (default: #2563EB)
+  logo?: string;               // URL to your logo
+  title?: string;              // Modal title
+  
+  // Behavior
+  closeOnSuccess?: boolean;    // Auto-close on success (default: false)
+  showSummary?: boolean;       // Show summary after parse (default: true)
+}
+```
+
+## Prefill Options
+
+```typescript
+interface Prefill {
+  email?: string;              // For KFintech generator
+  pan?: string;                // For CDSL fetch
+  dob?: string;                // For CDSL fetch (YYYY-MM-DD)
+}
+```
+
+## Event Callbacks
+
+### onSuccess
+
+```typescript
+interface SuccessPayload {
+  data: ParsedData;            // Parsed portfolio data
+  metadata: {
+    method: 'upload' | 'generator' | 'cdsl_fetch' | 'inbox';
+    cas_type: 'cdsl' | 'nsdl' | 'cams_kfintech';
+    processing_time_ms: number;
+  };
+}
+
+onSuccess={(payload) => {
+  console.log(`Total value: ₹${payload.data.summary.total_value}`);
+  console.log(`Method: ${payload.metadata.method}`);
+}}
+```
+
+### onError
+
+```typescript
+interface ErrorPayload {
+  code: string;
+  message: string;
+  details?: object;
+}
+
+onError={(error) => {
+  if (error.code === 'INVALID_PASSWORD') {
+    alert('Wrong password. Check your CAS email for the correct password.');
+  }
+}}
+```
+
+### onClose
+
+```typescript
+onClose={({ completed }) => {
+  if (!completed) {
+    console.log('User cancelled import');
+  }
+}}
+```
+
+## Error Codes
+
+| Code | Description | User Action |
+|------|-------------|-------------|
+| `INVALID_PASSWORD` | Wrong PDF password | Re-enter correct password |
+| `INVALID_PDF` | Corrupted or scanned PDF | Use original digital PDF |
+| `UNSUPPORTED_FORMAT` | Not a CAS file | Upload CAS, not bank statement |
+| `TOKEN_EXPIRED` | Access token expired | Generate new token |
+| `RATE_LIMITED` | Too many requests | Wait and retry |
+| `INSUFFICIENT_CREDITS` | No credits remaining | Upgrade plan |
+
+## Framework Examples
+
+### React
+
+```jsx
+import { PortfolioConnect } from '@cas-parser/connect';
+
+function ImportButton() {
+  const [accessToken, setAccessToken] = useState(null);
+  
+  useEffect(() => {
+    // Fetch token from your backend
+    fetch('/api/casparser/token')
+      .then(r => r.json())
+      .then(d => setAccessToken(d.access_token));
+  }, []);
+  
+  if (!accessToken) return <button disabled>Loading...</button>;
+  
+  return (
+    <PortfolioConnect
+      accessToken={accessToken}
+      config={{
+        enableCdslFetch: true,
+        enableInbox: true,
+        primaryColor: '#10B981'
+      }}
+      onSuccess={({ data }) => {
+        // Save to your backend
+        fetch('/api/portfolio', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+      }}
+    >
+      {({ open }) => (
+        <button onClick={open}>
+          Import Portfolio
+        </button>
+      )}
+    </PortfolioConnect>
+  );
+}
+```
+
+### Next.js (App Router)
+
+```tsx
+'use client';
+
+import { PortfolioConnect } from '@cas-parser/connect';
+import { useState } from 'react';
+
+export function ImportWidget({ accessToken }: { accessToken: string }) {
+  const [data, setData] = useState(null);
+  
+  return (
+    <>
+      <PortfolioConnect
+        accessToken={accessToken}
+        onSuccess={({ data }) => setData(data)}
+      >
+        {({ open }) => <button onClick={open}>Import</button>}
+      </PortfolioConnect>
+      
+      {data && (
+        <div>
+          <h2>Portfolio Value: ₹{data.summary.total_value.toLocaleString()}</h2>
+        </div>
+      )}
+    </>
+  );
+}
+```
+
+### Vanilla JavaScript
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@cas-parser/connect/dist/portfolio-connect.standalone.min.js"></script>
+
+<button id="import-btn">Import Portfolio</button>
+
+<script>
+const accessToken = 'at_xxx'; // From your backend
+
+document.getElementById('import-btn').onclick = async () => {
+  try {
+    const { data, metadata } = await PortfolioConnect.open({
+      accessToken,
+      config: {
+        enableCdslFetch: true,
+        primaryColor: '#8B5CF6'
+      }
+    });
+    
+    console.log('Success:', data.summary.total_value);
+    
+  } catch (error) {
+    if (error.message === 'Widget closed by user') {
+      console.log('Cancelled');
+    } else {
+      console.error('Error:', error);
+    }
+  }
+};
+</script>
+```
+
+### Vue 3
+
+```vue
+<template>
+  <button @click="openWidget">Import Portfolio</button>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+
+const accessToken = ref(null);
+
+onMounted(async () => {
+  const res = await fetch('/api/casparser/token');
+  const data = await res.json();
+  accessToken.value = data.access_token;
+});
+
+const openWidget = async () => {
+  const { PortfolioConnect } = await import('@cas-parser/connect');
+  
+  try {
+    const { data } = await PortfolioConnect.open({
+      accessToken: accessToken.value,
+      config: { enableCdslFetch: true }
+    });
+    
+    console.log(data);
+  } catch (e) {
+    console.error(e);
+  }
+};
+</script>
+```
+
+## Access Token Generation
+
+<Warning>
+  Never expose your API key to the frontend. Generate short-lived access tokens server-side.
+</Warning>
+
+```python
+# Backend endpoint
+from flask import Flask, jsonify
+import requests
+
+app = Flask(__name__)
+
+@app.route('/api/casparser/token')
+def get_token():
+    response = requests.post(
+        'https://api.casparser.in/v1/token',
+        headers={'x-api-key': os.environ['CASPARSER_API_KEY']},
+        json={'expiry_minutes': 30}
+    )
+    return jsonify(response.json())
+```
+
+Access tokens:
+- Prefix: `at_`
+- Max TTL: 60 minutes
+- Can be used on all `/v4/*` endpoints
+- Cannot generate other tokens
+
+## Styling
+
+The widget uses your `primaryColor` for buttons and accents. For deeper customization, use CSS variables:
+
+```css
+:root {
+  --pc-primary: #2563EB;
+  --pc-background: #FFFFFF;
+  --pc-text: #1F2937;
+  --pc-border-radius: 8px;
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Parsing Guide" icon="file-pdf" href="/guides/parsing">
+    Understand the response format
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all endpoints
+  </Card>
+</CardGroup>

@@ -1,0 +1,111 @@
+---
+title: cURL Quickstart
+description: Parse CAS PDFs from the command line using cURL.
+---
+
+## Prerequisites
+
+- cURL installed
+- [Get an API key](https://app.casparser.in/developers)
+- Have a CAS PDF ready (or use sandbox key)
+
+## 1. Parse a CAS PDF
+
+```bash
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@cas.pdf" \
+  -F "password=YOUR_PAN_NUMBER"
+```
+
+## 2. Parse from URL
+
+```bash
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pdf_url": "https://example.com/cas.pdf",
+    "password": "YOUR_PAN_NUMBER"
+  }'
+```
+
+## 3. Try it yourself
+
+Test without consuming credits:
+
+```bash
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: sandbox-with-json-responses" \
+  -F "file=@cas.pdf" \
+  -F "password=test"
+```
+
+## Check your credits
+
+```bash
+curl -X POST https://api.casparser.in/v1/credits \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+Response:
+
+```json
+{
+  "used": 15,
+  "remaining": 35,
+  "limit": 50,
+  "reset_date": "2024-02-01",
+  "features": ["cdsl", "nsdl", "cams_kfintech", "inbox", "cdsl_fetch"]
+}
+```
+
+## Response headers
+
+Every API response includes:
+
+| Header | Description |
+|--------|-------------|
+| `X-Request-ID` | Unique request ID (e.g., `req_abc123`) for support |
+| `X-Credits-Used` | Credits consumed by this request |
+| `X-Credits-Remaining` | Remaining credits for billing period |
+
+## Error handling
+
+```bash
+# Check response status
+response=$(curl -s -w "\n%{http_code}" -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@cas.pdf" \
+  -F "password=WRONG_PASSWORD")
+
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | sed '$d')
+
+if [ "$http_code" -ne 200 ]; then
+  echo "Error: $body"
+  exit 1
+fi
+
+echo "$body" | jq '.summary.total_value'
+```
+
+## Common errors
+
+| Status | Error | Solution |
+|--------|-------|----------|
+| 400 | Invalid password | Check PAN format (encrypted PAN for CDSL/NSDL) |
+| 401 | Invalid API key | Verify your API key at app.casparser.in |
+| 402 | Insufficient credits | Upgrade plan or wait for reset |
+| 422 | Invalid PDF | Ensure PDF is not scanned/tampered |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all endpoints
+  </Card>
+  <Card title="Sandbox" icon="flask" href="/resources/sandbox">
+    Test with sample data
+  </Card>
+</CardGroup>

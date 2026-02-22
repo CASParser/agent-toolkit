@@ -1,0 +1,6 @@
+<svg width="120" height="32" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="6" fill="#2563EB"/>
+  <path d="M10 16C10 12.6863 12.6863 10 16 10C19.3137 10 22 12.6863 22 16C22 19.3137 19.3137 22 16 22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M16 14V18M14 16H18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <text x="40" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#1E293B">CAS Parser</text>
+</svg>

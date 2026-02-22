@@ -1,0 +1,260 @@
+---
+title: Use Cases
+description: Real-world applications of CAS Parser across fintech, wealth management, and financial services.
+---
+
+## Portfolio Tracking Apps
+
+### Challenge
+Users have investments across multiple platforms (Zerodha, Groww, Kuvera, etc.). Manually entering transaction history is tedious and error-prone.
+
+### Solution
+Let users upload their CAS PDF to import their entire portfolio history in seconds.
+
+### Implementation
+
+```python
+# User uploads CAS PDF
+cas_data = casparser.parse(pdf_file, password)
+
+# Import to your database
+for folio in cas_data['mutual_funds']:
+    for scheme in folio['schemes']:
+        for txn in scheme['transactions']:
+            db.insert_transaction({
+                'user_id': user.id,
+                'date': txn['date'],
+                'scheme': scheme['scheme'],
+                'amount': txn['amount'],
+                'units': txn['units'],
+                'nav': txn['nav']
+            })
+```
+
+### Benefits
+- **70% faster onboarding** — Import years of data in seconds
+- **100% accurate** — No manual entry errors
+- **Better UX** — Users see complete portfolio immediately
+
+### Customers
+Angel One, Neo Wealth, Dezerv
+
+---
+
+## Wealth Management Platforms
+
+### Challenge
+Advisors need to understand client portfolios before making recommendations. Clients often have scattered investments across 5-10 platforms.
+
+### Solution
+Request CAS via KFintech API, parse automatically, and generate consolidated reports.
+
+### Implementation
+
+```python
+# Step 1: Request CAS generation
+casparser.generate_cas(
+    email=client.email,
+    pan=client.pan,
+    from_date="2020-01-01",
+    to_date="2024-12-31"
+)
+
+# Step 2: Client receives CAS in email, uploads to portal
+# Step 3: Parse and analyze
+cas_data = casparser.parse(pdf_file, password)
+
+# Generate asset allocation report
+allocation = calculate_allocation(cas_data)
+recommendations = generate_recommendations(allocation, client.risk_profile)
+```
+
+### Benefits
+- **Comprehensive view** — All investments in one place
+- **Faster advice** — Automated portfolio analysis
+- **Better decisions** — Data-driven recommendations
+
+### Customers
+Grip Invest, KFintech
+
+---
+
+## Tax Filing Platforms
+
+### Challenge
+Calculating capital gains requires transaction-level data. Users don't have organized records.
+
+### Solution
+Parse CAS to extract all buy/sell transactions, calculate FIFO/LIFO gains automatically.
+
+### Implementation
+
+```python
+cas_data = casparser.parse(pdf_file, password)
+
+# Extract equity transactions
+equity_txns = []
+for account in cas_data['demat_accounts']:
+    for equity in account['equities']:
+        for txn in equity.get('transactions', []):
+            equity_txns.append({
+                'isin': equity['isin'],
+                'date': txn['date'],
+                'type': txn['type'],
+                'quantity': txn['quantity'],
+                'price': txn['price']
+            })
+
+# Calculate capital gains
+gains = calculate_capital_gains(equity_txns, method='FIFO')
+```
+
+### Benefits
+- **Accurate ITR** — No missed transactions
+- **Time savings** — Automated gain calculation
+- **Audit trail** — Complete transaction history
+
+---
+
+## Credit Underwriting
+
+### Challenge
+Verifying borrower's financial status requires authentic portfolio data. Self-reported data is unreliable.
+
+### Solution
+Request CAS directly from CDSL via OTP, verify authenticity, assess creditworthiness.
+
+### Implementation
+
+```python
+# Step 1: Request OTP from CDSL
+session = casparser.cdsl_fetch(pan=borrower.pan, dob=borrower.dob)
+
+# Step 2: Borrower enters OTP
+cas_urls = casparser.cdsl_verify(session_id, otp)
+
+# Step 3: Parse and assess
+cas_data = casparser.parse_from_url(cas_urls['detailed'])
+
+# Calculate credit score factors
+total_portfolio_value = cas_data['summary']['total_value']
+equity_exposure = calculate_equity_percentage(cas_data)
+loan_eligibility = assess_eligibility(total_portfolio_value, equity_exposure)
+```
+
+### Benefits
+- **Tamper-proof** — Direct from depository
+- **Real-time** — Instant verification
+- **Accurate** — No self-reporting bias
+
+---
+
+## Financial Research
+
+### Challenge
+Analyzing investment trends requires aggregated portfolio data. Individual CAS files are unstructured.
+
+### Solution
+Parse thousands of CAS files, aggregate data, identify patterns.
+
+### Implementation
+
+```python
+# Batch processing
+results = []
+for cas_file in cas_files:
+    data = casparser.parse(cas_file, password)
+    results.append({
+        'total_value': data['summary']['total_value'],
+        'equity_count': len(data['demat_accounts'][0]['equities']),
+        'mf_count': sum(len(f['schemes']) for f in data['mutual_funds']),
+        'age_group': classify_age(data['investor']['name'])
+    })
+
+# Aggregate insights
+avg_portfolio_value = statistics.mean(r['total_value'] for r in results)
+popular_stocks = Counter(e['isin'] for r in results for e in r['equities']).most_common(10)
+```
+
+### Benefits
+- **Large-scale analysis** — Process thousands of CAS files
+- **Market insights** — Identify trends and patterns
+- **Research reports** — Data-driven publications
+
+---
+
+## Robo-Advisors
+
+### Challenge
+Providing personalized advice requires understanding current portfolio allocation.
+
+### Solution
+Parse CAS, analyze allocation, suggest rebalancing.
+
+### Implementation
+
+```python
+cas_data = casparser.parse(pdf_file, password)
+
+# Current allocation
+current = {
+    'equity': calculate_equity_value(cas_data),
+    'debt': calculate_debt_value(cas_data),
+    'gold': calculate_gold_value(cas_data)
+}
+
+# Target allocation (based on risk profile)
+target = {'equity': 0.6, 'debt': 0.3, 'gold': 0.1}
+
+# Rebalancing suggestions
+suggestions = generate_rebalancing_plan(current, target)
+```
+
+### Benefits
+- **Personalized advice** — Based on actual holdings
+- **Automated rebalancing** — Data-driven suggestions
+- **Better outcomes** — Optimized portfolios
+
+---
+
+## Insurance Platforms
+
+### Challenge
+Assessing insurance needs requires knowing existing coverage and assets.
+
+### Solution
+Parse CAS to extract insurance policies and portfolio value, recommend coverage.
+
+### Implementation
+
+```python
+cas_data = casparser.parse(pdf_file, password)
+
+# Extract existing insurance
+existing_coverage = sum(p['sum_assured'] for p in cas_data['insurance'])
+
+# Calculate recommended coverage
+portfolio_value = cas_data['summary']['total_value']
+recommended_coverage = portfolio_value * 10  # 10x rule
+
+# Gap analysis
+coverage_gap = recommended_coverage - existing_coverage
+```
+
+### Benefits
+- **Accurate needs** — Based on real assets
+- **Gap identification** — Underinsured users
+- **Cross-sell** — Targeted recommendations
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart/python">
+    Start building your use case
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all endpoints
+  </Card>
+</CardGroup>

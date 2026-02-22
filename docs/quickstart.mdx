@@ -1,0 +1,50 @@
+---
+title: Quickstart
+description: Get started with CAS Parser in under 5 minutes. Choose your preferred language.
+---
+
+## Prerequisites
+
+1. **Get an API key** from [app.casparser.in/developers](https://app.casparser.in/developers)
+2. **Have a CAS PDF** ready, or use our sandbox key for testing
+
+<Note>
+  For testing, use `sandbox-with-json-responses` as your API key. It returns sample data without consuming credits.
+</Note>
+
+## Choose your language
+
+<CardGroup cols={3}>
+  <Card title="Python" icon="python" href="/quickstart/python">
+    requests library
+  </Card>
+  <Card title="Node.js" icon="node-js" href="/quickstart/nodejs">
+    fetch or axios
+  </Card>
+  <Card title="cURL" icon="terminal" href="/quickstart/curl">
+    Command line
+  </Card>
+</CardGroup>
+
+## What you'll build
+
+In this quickstart, you'll parse a CAS PDF and receive structured JSON containing:
+
+- **Investor details** — Name, email, PAN, mobile
+- **Portfolio summary** — Total value, account counts
+- **Demat holdings** — Equities, bonds, AIFs, ETFs
+- **Mutual funds** — Folios with transactions (50+ years of history)
+- **Insurance & NPS** — Policy details and pension accounts
+
+## API endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v4/smart/parse` | Auto-detect CAS type and parse (recommended) |
+| `POST /v4/cdsl/parse` | Parse CDSL eCAS specifically |
+| `POST /v4/nsdl/parse` | Parse NSDL eCAS specifically |
+| `POST /v4/cams_kfintech/parse` | Parse CAMS/KFintech CAS specifically |
+
+<Tip>
+  Use `/v4/smart/parse` for most cases. It automatically detects the CAS type and returns a unified response format.
+</Tip>

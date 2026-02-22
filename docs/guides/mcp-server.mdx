@@ -1,0 +1,196 @@
+---
+title: MCP Server
+description: Model Context Protocol server for AI agents. Use CAS Parser tools directly in Claude, Cursor, Windsurf, and VS Code.
+---
+
+The official CAS Parser MCP server provides all API endpoints as tools for AI agents. Built on the [Model Context Protocol](https://modelcontextprotocol.io/) standard.
+
+## Installation
+
+```bash
+npm install -g cas-parser-node-mcp
+```
+
+Or use directly via npx (no install required):
+
+```bash
+npx -y cas-parser-node-mcp@latest
+```
+
+## Configuration
+
+### Claude Desktop
+
+Add to `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "command": "npx",
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+Or via CLI:
+
+```bash
+claude mcp add cas_parser_node_mcp -e CAS_PARSER_API_KEY=your-api-key -- npx -y cas-parser-node-mcp@latest
+```
+
+### Cursor
+
+Add to Cursor Settings → Tools & MCP → `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "command": "npx",
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+1. Open Windsurf Settings
+2. Navigate to **Cascade → MCP**
+3. Click **Add Server**
+4. Enter:
+   - **Name:** `cas_parser_node_mcp`
+   - **Type:** `command`
+   - **Command:** `npx -y cas-parser-node-mcp@latest`
+   - **Environment:** `CAS_PARSER_API_KEY=your-api-key`
+
+### VS Code
+
+Add to your VS Code MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "command": "npx",
+      "args": ["-y", "cas-parser-node-mcp@latest"],
+      "env": {
+        "CAS_PARSER_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+### Remote Server (Streamable HTTP)
+
+If you prefer not to install the npm package locally:
+
+```json
+{
+  "mcpServers": {
+    "cas_parser_node_mcp": {
+      "url": "https://cas-parser.stlmcp.com",
+      "headers": {
+        "x-api-key": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+The MCP server exposes all CAS Parser API endpoints as tools:
+
+| Tool | Description |
+|------|-------------|
+| `smart_parse` | Auto-detect CAS type and parse PDF |
+| `cdsl_parse` | Parse CDSL eCAS |
+| `nsdl_parse` | Parse NSDL eCAS |
+| `cams_kfintech_parse` | Parse CAMS/KFintech CAS |
+| `contract_note_parse` | Parse broker contract notes |
+| `kfintech_generate` | Request CAS via KFintech email |
+| `cdsl_fetch` | CDSL OTP request (Step 1) |
+| `cdsl_fetch_verify` | CDSL OTP verify (Step 2) |
+| `inbox_connect` | Get Gmail OAuth URL |
+| `inbox_cas` | List/parse CAS from inbox |
+| `inbox_disconnect` | Revoke email access |
+| `credits` | Check remaining credits |
+| `token_generate` | Generate access token |
+
+## Code Mode
+
+The MCP server includes **Code Mode** — agents can write TypeScript SDK code that runs in a sandboxed environment:
+
+```typescript
+// Agent-generated code example
+const response = await casparser.smartParse({
+  file: pdfBuffer,
+  password: "ABCDE1234F"
+});
+
+console.log(`Portfolio value: ₹${response.summary.total_value}`);
+```
+
+## Doc Search Tool
+
+The server includes a documentation search tool that lets agents query CAS Parser docs:
+
+```
+Agent: "How do I parse a CDSL CAS file?"
+Tool: doc_search("CDSL CAS parsing")
+→ Returns relevant documentation snippets
+```
+
+## Example Prompts
+
+Once configured, you can ask your AI agent:
+
+- "Parse this CAS PDF and show me my portfolio summary"
+- "What are my top holdings by value?"
+- "Check my CAS Parser credit balance"
+- "Import my latest CAS from Gmail"
+- "Fetch my CDSL holdings using OTP"
+
+## Sandbox Testing
+
+Use the sandbox API key for testing:
+
+```json
+{
+  "env": {
+    "CAS_PARSER_API_KEY": "sandbox-with-json-responses"
+  }
+}
+```
+
+The sandbox returns sample data without consuming credits.
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "API key invalid" | Check `CAS_PARSER_API_KEY` env var |
+| "Tool not found" | Restart your IDE after config change |
+| "Connection refused" | Ensure npx can access npm registry |
+| "Timeout" | Parsing takes ~30-60s; increase timeout |
+
+## Links
+
+<CardGroup cols={2}>
+  <Card title="NPM Package" icon="npm" href="https://www.npmjs.com/package/cas-parser-node-mcp">
+    View on npm registry
+  </Card>
+  <Card title="Agent Toolkit" icon="github" href="https://github.com/CASParser/agent-toolkit">
+    Templates and examples
+  </Card>
+</CardGroup>

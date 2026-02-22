@@ -1,0 +1,186 @@
+---
+title: Parsing CAS PDFs
+description: Upload CAS PDF files and extract structured portfolio data. Supports CDSL, NSDL, CAMS, and KFintech formats.
+---
+
+## Overview
+
+CAS Parser extracts structured data from Consolidated Account Statement (CAS) PDFs issued by Indian depositories and registrars.
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  CAS PDF    │────▶│  CAS Parser │────▶│ Unified JSON│
+│  (any type) │     │  Smart API  │     │  Response   │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## Supported CAS types
+
+| Source | Format | Password |
+|--------|--------|----------|
+| **CDSL** | eCAS from myeasicm.com | Encrypted PAN |
+| **NSDL** | eCAS from nsdlcas.nsdl.com | Encrypted PAN |
+| **CAMS** | CAS from camsonline.com | PAN number |
+| **KFintech** | CAS from kfintech.com | PAN number |
+
+<Tip>
+  Use `/v4/smart/parse` — it auto-detects the CAS type and applies the correct parser.
+</Tip>
+
+## Parse a PDF file
+
+<CodeGroup>
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v4/smart/parse",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    files={"file": open("cas.pdf", "rb")},
+    data={"password": "ABCDE1234F"}
+)
+
+data = response.json()
+```
+
+```javascript Node.js
+const form = new FormData();
+form.append('file', fs.createReadStream('cas.pdf'));
+form.append('password', 'ABCDE1234F');
+
+const response = await fetch('https://api.casparser.in/v4/smart/parse', {
+  method: 'POST',
+  headers: { 'x-api-key': 'YOUR_API_KEY' },
+  body: form
+});
+
+const data = await response.json();
+```
+
+```bash cURL
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@cas.pdf" \
+  -F "password=ABCDE1234F"
+```
+</CodeGroup>
+
+## Parse from URL
+
+If your CAS PDF is hosted online:
+
+```python
+response = requests.post(
+    "https://api.casparser.in/v4/smart/parse",
+    headers={
+        "x-api-key": "YOUR_API_KEY",
+        "Content-Type": "application/json"
+    },
+    json={
+        "pdf_url": "https://example.com/cas.pdf",
+        "password": "ABCDE1234F"
+    }
+)
+```
+
+## Response format
+
+All CAS types return a unified JSON structure:
+
+```json
+{
+  "status": "success",
+  "cas_type": "cdsl",
+  "investor": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "pan": "ABCDE1234F",
+    "mobile": "9876543210"
+  },
+  "summary": {
+    "total_value": 2500000.00,
+    "as_on_date": "2024-01-15",
+    "accounts": {
+      "demat_accounts": 2,
+      "mutual_fund_folios": 5,
+      "insurance_policies": 1,
+      "nps_accounts": 1
+    }
+  },
+  "demat_accounts": [
+    {
+      "dp_id": "12345678",
+      "dp_name": "HDFC Bank",
+      "client_id": "12345678901234",
+      "total_value": 1500000.00,
+      "equities": [...],
+      "corporate_bonds": [...],
+      "mutual_funds": [...],
+      "aifs": [...]
+    }
+  ],
+  "mutual_funds": [
+    {
+      "folio": "1234567890",
+      "amc": "HDFC Mutual Fund",
+      "schemes": [...]
+    }
+  ],
+  "insurance": [...],
+  "nps": [...]
+}
+```
+
+## Asset classes extracted
+
+CAS Parser extracts **9 asset classes** from your CAS:
+
+| Asset Class | Source | Fields |
+|-------------|--------|--------|
+| Equities | CDSL, NSDL | ISIN, name, units, value |
+| Mutual Funds (Demat) | CDSL, NSDL | ISIN, scheme, units, NAV |
+| Mutual Funds (Non-Demat) | CAMS, KFintech | Folio, scheme, units, NAV, transactions |
+| Corporate Bonds | CDSL, NSDL | ISIN, issuer, coupon, maturity |
+| G-Secs | CDSL, NSDL | ISIN, name, units, value |
+| AIFs | CDSL, NSDL | ISIN, fund, units, value |
+| Insurance | CDSL, NSDL | Policy, provider, sum assured |
+| NPS | CDSL, NSDL | PRAN, tier, fund, units |
+| ETFs | CDSL, NSDL | ISIN, name, units, value |
+
+## Password requirements
+
+| CAS Type | Password Format | Example |
+|----------|-----------------|---------|
+| CDSL eCAS | Encrypted PAN | `AXXXX1234X` (varies) |
+| NSDL eCAS | Encrypted PAN | `AXXXX1234X` (varies) |
+| CAMS CAS | Plain PAN | `ABCDE1234F` |
+| KFintech CAS | Plain PAN | `ABCDE1234F` |
+
+<Warning>
+  For CDSL and NSDL eCAS, the password is an encrypted version of the PAN. It varies by statement. If parsing fails, check the email that delivered the CAS for the correct password.
+</Warning>
+
+## Error handling
+
+```python
+response = requests.post(...)
+data = response.json()
+
+if data.get("status") == "failed":
+    error = data.get("msg")
+    # Common errors:
+    # - "Invalid password" — wrong PAN/encryption
+    # - "Invalid PDF" — corrupted or scanned file
+    # - "Unsupported format" — not a CAS file
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Gmail Import" icon="envelope" href="/guides/gmail-inbox">
+    Import CAS from user email
+  </Card>
+  <Card title="CAS Generator" icon="rotate" href="/guides/cas-generator">
+    Request CAS programmatically
+  </Card>
+</CardGroup>

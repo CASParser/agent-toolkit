@@ -1,0 +1,124 @@
+---
+title: API Reference
+description: Complete API documentation for CAS Parser. All endpoints auto-generated from OpenAPI spec.
+---
+
+## Base URL
+
+```
+https://api.casparser.in
+```
+
+## Authentication
+
+All API requests require an `x-api-key` header:
+
+```bash
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@cas.pdf" \
+  -F "password=ABCDE1234F"
+```
+
+<Tip>
+  **Sandbox:** Use `sandbox-with-json-responses` for testing without consuming credits.
+</Tip>
+
+## Access Tokens
+
+For frontend/SDK use, generate short-lived tokens from your backend:
+
+```python
+response = requests.post(
+    "https://api.casparser.in/v1/token",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"expiry_minutes": 30}
+)
+token = response.json()["access_token"]  # at_xxx
+```
+
+Access tokens (`at_` prefix) can replace API keys on all `/v4/*` endpoints.
+
+## Endpoints
+
+### Parsing
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v4/smart/parse` | Auto-detect CAS type and parse |
+| POST | `/v4/cdsl/parse` | Parse CDSL eCAS |
+| POST | `/v4/nsdl/parse` | Parse NSDL eCAS |
+| POST | `/v4/cams_kfintech/parse` | Parse CAMS/KFintech CAS |
+| POST | `/v4/contract_note/parse` | Parse broker contract notes |
+
+### Data Retrieval
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v4/kfintech/generate` | Request CAS via KFintech email |
+| POST | `/v4/cdsl/fetch` | CDSL OTP request (Step 1) |
+| POST | `/v4/cdsl/fetch/{session_id}/verify` | CDSL OTP verify (Step 2) |
+
+### Email Import
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v4/inbox/connect` | Get Gmail OAuth URL |
+| POST | `/v4/inbox/status` | Check connection status |
+| POST | `/v4/inbox/cas` | List/parse CAS from inbox |
+| POST | `/v4/inbox/disconnect` | Revoke access |
+
+### Account
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/credits` | Check remaining credits |
+| POST | `/v1/usage` | Get usage logs |
+| POST | `/v1/usage/summary` | Get aggregated usage |
+| POST | `/v1/token` | Generate access token |
+| POST | `/v1/token/verify` | Verify access token |
+
+## Response Format
+
+```json
+{
+  "status": "success",
+  "cas_type": "cdsl",
+  "investor": {
+    "name": "John Doe",
+    "pan": "ABCDE1234F"
+  },
+  "summary": {
+    "total_value": 2500000.00,
+    "as_on_date": "2024-01-15"
+  },
+  "demat_accounts": [...],
+  "mutual_funds": [...]
+}
+```
+
+## Error Handling
+
+```json
+{
+  "status": "failed",
+  "msg": "Invalid password for PDF"
+}
+```
+
+| Status | Meaning | Retry? |
+|--------|---------|--------|
+| 400 | Bad request | No — fix request |
+| 401 | Invalid API key | No — check key |
+| 402 | Insufficient credits | No — upgrade plan |
+| 500 | Server error | Yes — exponential backoff |
+
+## Request ID
+
+Every response includes `X-Request-ID`:
+
+```
+X-Request-ID: req_2xYz7KpL8mN3Ab
+```
+
+Include this when contacting support.

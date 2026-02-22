@@ -1,0 +1,124 @@
+---
+title: Sandbox
+description: Test CAS Parser APIs without consuming credits using the sandbox API key.
+---
+
+## Sandbox API Key
+
+Use this key for development and testing:
+
+```
+sandbox-with-json-responses
+```
+
+The sandbox returns sample data for all endpoints without consuming credits.
+
+## Usage
+
+<CodeGroup>
+```python Python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v4/smart/parse",
+    headers={"x-api-key": "sandbox-with-json-responses"},
+    files={"file": open("any-pdf.pdf", "rb")},
+    data={"password": "test"}
+)
+
+# Returns sample portfolio data
+print(response.json())
+```
+
+```bash cURL
+curl -X POST https://api.casparser.in/v4/smart/parse \
+  -H "x-api-key: sandbox-with-json-responses" \
+  -F "file=@any-pdf.pdf" \
+  -F "password=test"
+```
+</CodeGroup>
+
+## Sample Response
+
+The sandbox returns realistic sample data:
+
+```json
+{
+  "status": "success",
+  "cas_type": "cdsl",
+  "investor": {
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "pan": "ABCDE1234F",
+    "mobile": "9876543210"
+  },
+  "summary": {
+    "total_value": 2547832.50,
+    "as_on_date": "2024-01-15",
+    "accounts": {
+      "demat_accounts": 2,
+      "mutual_fund_folios": 5,
+      "insurance_policies": 1,
+      "nps_accounts": 1
+    }
+  },
+  "demat_accounts": [
+    {
+      "dp_id": "12345678",
+      "dp_name": "HDFC Bank Limited",
+      "client_id": "1234567890123456",
+      "total_value": 1500000.00,
+      "equities": [
+        {
+          "isin": "INE002A01018",
+          "name": "Reliance Industries Ltd",
+          "units": 100,
+          "value": 250000.00
+        }
+      ]
+    }
+  ]
+}
+```
+
+## What sandbox covers
+
+| Endpoint | Sandbox Behavior |
+|----------|------------------|
+| `/v4/smart/parse` | Returns sample CDSL data |
+| `/v4/cdsl/parse` | Returns sample CDSL data |
+| `/v4/nsdl/parse` | Returns sample NSDL data |
+| `/v4/cams_kfintech/parse` | Returns sample MF data |
+| `/v4/kfintech/generate` | Returns success (no email sent) |
+| `/v4/cdsl/fetch` | Returns mock session_id |
+| `/v4/inbox/*` | Returns mock OAuth flow |
+| `/v1/credits` | Returns unlimited credits |
+| `/v1/token` | Returns working access token |
+
+## Moving to Production
+
+1. **Get an API key** at [app.casparser.in/developers](https://app.casparser.in/developers)
+2. **Replace** `sandbox-with-json-responses` with your real API key
+3. **Test** with a real CAS PDF to verify integration
+
+<Warning>
+  The sandbox PDF password validation is disabled. In production, you must provide the correct password for each CAS type.
+</Warning>
+
+## Rate Limits
+
+| Environment | Rate Limit |
+|-------------|------------|
+| Sandbox | 10 requests/minute |
+| Production | Based on your plan |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first integration
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all endpoints
+  </Card>
+</CardGroup>
