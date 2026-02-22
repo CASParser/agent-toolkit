@@ -54,14 +54,6 @@
             ]
           },
           {
-            "group": "Data Models",
-            "pages": [
-              "learn/schemas/unified-response",
-              "learn/schemas/demat-account",
-              "learn/schemas/mutual-fund-folio"
-            ]
-          },
-          {
             "group": "Resources",
             "pages": [
               "resources/sandbox",
