@@ -1,6 +1,6 @@
 # CAS Parser Integration
 
-This repository is the **CAS Parser Agent Toolkit** — a collection of templates, skills, and documentation for integrating financial portfolio tracking into applications using the [CAS Parser API](https://docs.casparser.in/).
+This repository is the **CAS Parser Agent Toolkit** — a collection of templates, skills, and documentation for integrating financial portfolio tracking into applications using the [CAS Parser API](https://casparser.in/docs/).
 
 ## What is CAS Parser?
 
