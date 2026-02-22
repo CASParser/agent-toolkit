@@ -181,7 +181,7 @@ Or try specific tasks:
 ## Resources
 
 - [CAS Parser Documentation](https://casparser.in/docs/) — Official docs
-- [API Reference](https://casparser.in/docs/reference) — Interactive API reference
+- [API Reference](https://casparser.in/docs/api-reference/introduction) — Interactive API reference
 - [CAS Parser Web Portal](https://app.casparser.in) — Try it online
 - [Portfolio Connect SDK](https://www.npmjs.com/package/@cas-parser/connect) — Frontend UI widget (npm)
 - [Node.js / TypeScript SDK](https://www.npmjs.com/package/cas-parser-node) — Official TypeScript API client (npm)
