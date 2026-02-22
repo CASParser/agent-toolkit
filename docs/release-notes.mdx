@@ -1,0 +1,265 @@
+---
+title: Release Notes
+description: Latest updates from CAS Parser
+---
+
+**Last Updated:** February 2026  
+**API Documentation:** [API Reference](/api-reference/introduction)
+
+---
+
+## 📅 February 2026
+
+### AI Agent Toolkit
+
+The [Agent Toolkit](https://github.com/CASParser/agent-toolkit) helps empower AI agents with CAS parsing capabilities. Includes Model Context Protocol (MCP) support for seamless integration with LLM clients like Claude Desktop.
+
+### Usage Tracking & Analytics
+
+Monitor API consumption via new endpoints and the Web Portal dashboard.
+
+**API Endpoints:**
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/usage` | Detailed request-level usage logs with timestamps, status codes, and credits consumed |
+| `POST /v1/usage/summary` | Aggregated analytics grouped by feature — ideal for overview |
+
+**Web Portal** ([app.casparser.in](https://app.casparser.in)):
+- Visual usage dashboard with charts and trends
+- Filter by date range and feature type
+
+Response includes: `X-Request-ID`, feature name, credits, status code, and timestamp for each API call.
+
+---
+
+## 📅 January 2026
+
+### Portfolio Connect SDK
+
+Drop-in widget for importing Indian investment portfolios — go live without building UI.
+
+```bash
+npm install @cas-parser/connect
+```
+
+**What it does:**
+- Pre-built UI for file upload, CDSL OTP fetch, and MF statement generation
+- Works with React, Next.js, Angular, Vue, Vanilla JS, React Native, and Flutter
+- Customizable branding (logo, title, colors)
+- Event callbacks for analytics integration
+
+```jsx
+<PortfolioConnect
+  accessToken="at_xxxxx"
+  onSuccess={(data) => console.log(data)}
+>
+  {({ open }) => <button onClick={open}>Import Portfolio</button>}
+</PortfolioConnect>
+```
+
+Bundle sizes: 54KB gzipped (standalone)
+
+### Short-Lived Access Tokens
+
+Securely pass parsing capability to client-side applications without exposing your API key.
+
+**How it works:**
+1. Generate token from your backend: `POST /v1/token`
+2. Pass the `at_` prefixed token to frontend/SDK
+3. Token works as drop-in replacement for `x-api-key`
+
+**Properties:**
+- Expires in 60 minutes (configurable)
+- Cannot generate other tokens
+- Verify validity: `POST /v1/token/verify`
+
+### Inbox Integration - Gmail Import
+
+Import CAS files directly from user email inboxes via OAuth. CASA verified by Google for secure, compliant email access.
+
+**Flow:**
+1. `POST /v4/inbox/connect` → Get OAuth URL
+2. User authorizes read-only email access
+3. `POST /v4/inbox/cas` → List and download CAS attachments
+
+**Supported senders:** CDSL, NSDL, CAMS, KFintech
+
+**Security:**
+- Google CASA Audit approved
+- Read-only access (cannot send emails)
+- Tokens encrypted server-side
+- User can revoke via `/v4/inbox/disconnect`
+
+### CDSL Instant Fetch
+
+Retrieve CDSL statements directly via OTP authentication — no email wait required.
+
+**Two-step flow:**
+1. `POST /v4/cdsl/fetch` — Submit credentials, receive OTP on registered mobile
+2. `POST /v4/cdsl/fetch/{session_id}/verify` — Submit OTP, receive download URLs
+
+Returns: Up to 6 monthly CAS PDFs as direct download URLs.
+
+---
+
+## 📅 December 2025
+
+### Demat Transaction History
+
+CDSL and NSDL statements now include transaction-level detail for demat holdings.
+
+**Available in:** `/v4/smart/parse`, `/v4/cdsl/parse`, `/v4/nsdl/parse`
+
+Each holding now includes a `transactions` array with:
+- Transaction date and type (buy/sell/corporate action)
+- Quantity changes (open/close units)
+- Value at transaction time
+
+**Web Portal:** Expandable transaction rows in the results table for demat holdings.
+
+### Request Tracing
+
+All API responses now include a `X-Request-ID` header in the format `req_<alphanumeric>`.
+
+Use this ID to:
+- Correlate requests with usage logs
+- Reference specific calls when contacting support
+- Debug issues in your application
+
+---
+
+## 📅 September 2025
+
+### NPS Account Support
+
+National Pension System accounts are now captured in NSDL statements.
+
+**Response includes:**
+- PRAN (Permanent Retirement Account Number)
+- Fund-wise holdings with gain/loss
+- Tier classification (Tier I / Tier II)
+- Fund type (Equity, Corporate Bond, Government Securities, etc.)
+
+### Holders Summary
+
+NSDL statements now capture account holder information with linked PAN details for joint accounts and nominee tracking.
+
+---
+
+## 📅 July 2025
+
+### Mobile-Optimized Web Portal
+
+The Web Portal ([app.casparser.in](https://app.casparser.in)) is now fully responsive with touch-friendly controls, optimized form elements, and improved layouts for mobile devices.
+
+### Security Trust Indicators
+
+Enhanced upload area with prominent security messaging — no file storage after processing, end-to-end encryption, and India-hosted infrastructure.
+
+### Corporate Bonds Support (CDSL)
+
+CDSL statements now parse corporate bond holdings alongside equities.
+
+**Bond data includes:**
+- ISIN and company name
+- Coupon rate and maturity date
+- Face value, market value, and total value
+- Number of bonds held
+
+```json
+{
+  "holdings": {
+    "corporate_bonds": [
+      {
+        "isin": "INE123A01234",
+        "name": "Company Name",
+        "coupon_rate": "8.5%",
+        "maturity_date": "2027-12-31",
+        "units": 10,
+        "value": 105000
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 📅 June 2025
+
+### Smart Parse Endpoint
+
+Single endpoint that auto-detects CAS type and returns a unified response format.
+
+```
+POST /v4/smart/parse
+```
+
+**Benefits:**
+- No need to pre-identify if the PDF is from CDSL, NSDL, or CAMS/KFintech
+- Consistent response schema regardless of source
+- Reduces integration complexity
+
+### KFintech CAS Generator
+
+Programmatically request CAS statements via KFintech's email mailback service.
+
+```
+POST /v4/kfintech/generate
+```
+
+Parameters: `email`, `from_date`, `to_date`, `password`, optional `pan_no`
+
+The investor receives the password-protected CAS PDF in their email within minutes.
+
+### Live Chat Support
+
+In-app chat support for real-time assistance with API integration and troubleshooting.
+
+### Sandbox Mode
+
+Test API integrations without consuming credits using the sandbox key `sandbox-with-json-responses`. Returns realistic sample responses for all endpoints.
+
+---
+
+## 📅 April 2025
+
+### Passwordless Authentication
+
+Sign in to the Web Portal using email magic links — no password required. Enter your email, click the link sent to your inbox, and you're in.
+
+---
+
+## API Endpoints Summary
+
+| Category | Endpoint | Description |
+|----------|----------|-------------|
+| **Parsing** | `POST /v4/smart/parse` | Auto-detect and parse any CAS |
+| | `POST /v4/nsdl/parse` | Parse NSDL CAS |
+| | `POST /v4/cdsl/parse` | Parse CDSL CAS |
+| | `POST /v4/cams_kfintech/parse` | Parse CAMS/KFintech CAS |
+| **Generation** | `POST /v4/kfintech/generate` | Request CAS via email |
+| **Fetch** | `POST /v4/cdsl/fetch` | CDSL OTP request |
+| | `POST /v4/cdsl/fetch/{id}/verify` | CDSL OTP verify + download |
+| **Email Import** | `POST /v4/inbox/connect` | Initiate OAuth |
+| | `POST /v4/inbox/cas` | List CAS files from inbox |
+| | `POST /v4/inbox/disconnect` | Revoke email access |
+| **Access Tokens** | `POST /v1/token` | Generate short-lived token |
+| | `POST /v1/token/verify` | Validate token |
+| **SDK** | `@cas-parser/connect` | Drop-in widget (npm package) |
+| **Usage** | `POST /v1/credits` | Check remaining credits |
+| | `POST /v1/usage` | Detailed usage logs |
+| | `POST /v1/usage/summary` | Aggregated analytics |
+
+We've been in business since 2020, this is just an overview of recent releases :)
+
+---
+
+## Getting Started
+
+1. Sign up at [app.casparser.in](https://app.casparser.in) to get your API key
+2. Use `sandbox-with-json-responses` as a test key for development
+3. Explore the interactive API docs at [API Reference](/api-reference/introduction)
+
+Questions? Contact us at [sameer@casparser.in](mailto:sameer@casparser.in)

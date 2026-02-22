@@ -1,0 +1,150 @@
+---
+title: Node.js Quickstart
+description: Parse your first CAS PDF with Node.js using fetch or axios.
+---
+
+## Prerequisites
+
+- Node.js 18+
+- [Get an API key](https://app.casparser.in/developers)
+- Have a CAS PDF ready (or use sandbox key)
+
+## 1. Using fetch (Node.js 18+)
+
+```javascript
+import fs from 'fs';
+
+const formData = new FormData();
+formData.append('file', new Blob([fs.readFileSync('cas.pdf')]));
+formData.append('password', 'YOUR_PAN_NUMBER');
+
+const response = await fetch('https://api.casparser.in/v4/smart/parse', {
+  method: 'POST',
+  headers: { 'x-api-key': 'YOUR_API_KEY' },
+  body: formData
+});
+
+const data = await response.json();
+console.log(`Investor: ${data.investor.name}`);
+console.log(`Total Value: ₹${data.summary.total_value.toLocaleString()}`);
+```
+
+## 2. Using axios
+
+```bash
+npm install axios form-data
+```
+
+```javascript
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
+
+const form = new FormData();
+form.append('file', fs.createReadStream('cas.pdf'));
+form.append('password', 'YOUR_PAN_NUMBER');
+
+const response = await axios.post(
+  'https://api.casparser.in/v4/smart/parse',
+  form,
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY',
+      ...form.getHeaders()
+    },
+    timeout: 60000
+  }
+);
+
+console.log(response.data);
+```
+
+## TypeScript types
+
+```typescript
+interface CASResponse {
+  status: 'success' | 'failed';
+  msg?: string;
+  investor: {
+    name: string;
+    email: string;
+    pan: string;
+    mobile: string;
+  };
+  summary: {
+    total_value: number;
+    accounts: {
+      demat_accounts: number;
+      mutual_fund_folios: number;
+      insurance_policies: number;
+      nps_accounts: number;
+    };
+  };
+  demat_accounts: DematAccount[];
+  mutual_funds: MutualFund[];
+  insurance: InsurancePolicy[];
+  nps: NPSAccount[];
+}
+
+interface DematAccount {
+  dp_id: string;
+  dp_name: string;
+  client_id: string;
+  equities: Equity[];
+  corporate_bonds: Bond[];
+}
+
+interface Equity {
+  isin: string;
+  name: string;
+  units: number;
+  value: number;
+}
+```
+
+## Full example with error handling
+
+```typescript
+import axios from 'axios';
+import FormData from 'form-data';
+import fs from 'fs';
+
+const API_KEY = process.env.CASPARSER_API_KEY;
+const API_URL = 'https://api.casparser.in/v4/smart/parse';
+
+async function parseCAS(pdfPath: string, password: string): Promise<CASResponse> {
+  const form = new FormData();
+  form.append('file', fs.createReadStream(pdfPath));
+  form.append('password', password);
+
+  const response = await axios.post<CASResponse>(API_URL, form, {
+    headers: {
+      'x-api-key': API_KEY,
+      ...form.getHeaders()
+    },
+    timeout: 60000
+  });
+
+  if (response.data.status === 'failed') {
+    throw new Error(`Parsing failed: ${response.data.msg}`);
+  }
+
+  return response.data;
+}
+
+// Usage
+const data = await parseCAS('cas.pdf', 'ABCDE1234F');
+console.log(`Investor: ${data.investor.name}`);
+console.log(`Total Value: ₹${data.summary.total_value.toLocaleString()}`);
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Portfolio Connect SDK" icon="puzzle-piece" href="/sdk/portfolio-connect">
+    Drop-in React widget
+  </Card>
+  <Card title="Gmail Import" icon="envelope" href="/guides/gmail-inbox">
+    Import from user email
+  </Card>
+</CardGroup>

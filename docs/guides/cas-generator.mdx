@@ -1,0 +1,161 @@
+---
+title: CAS Generator for Mutual Funds
+description: Request mutual fund CAS statements programmatically. Get 50+ years of portfolio history from both KFintech and CAMS RTAs.
+---
+
+## Overview
+
+CAS Generator triggers a mutual fund CAS statement to be emailed to your user — no manual portal visits needed.
+
+**Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership that provides data from both RTAs (Registrar and Transfer Agents), so this endpoint retrieves mutual fund data from both KFintech and CAMS, covering all mutual funds in India.
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Your App   │────▶│  CAS Parser │────▶│  KFintech   │────▶│  User Email │
+│             │     │  Generator  │     │  Portal     │     │  (CAS PDF)  │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+**Use cases:**
+- Client onboarding (request 50 years of history)
+- Automated monthly portfolio updates
+- Filling gaps in transaction history
+
+<Note>
+  KFintech emails the CAS to the user's registered email within a few minutes. The CAS is not returned in the API response.
+</Note>
+
+## Request a CAS statement
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v4/kfintech/generate",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={
+        "email": "investor@example.com",
+        "from_date": "1990-01-01",
+        "to_date": "2024-01-15",
+        "password": "Abcdefghi12$"
+    }
+)
+
+data = response.json()
+# {"status": "success", "msg": "CAS request submitted. Check email shortly."}
+```
+
+## Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `email` | Yes | User's email registered with KFintech |
+| `pan_no` | No | User's PAN number (optional) |
+| `from_date` | Yes | Start date (YYYY-MM-DD) |
+| `to_date` | Yes | End date (YYYY-MM-DD) |
+| `password` | Yes | Password for the PDF |
+
+## Integration patterns
+
+### Pattern 1: Generate + Gmail Import
+
+Combine CAS Generator with Gmail Inbox Import for a seamless flow:
+
+```python
+# 1. Request CAS generation
+requests.post(
+    "https://api.casparser.in/v4/kfintech/generate",
+    headers={"x-api-key": API_KEY},
+    json={
+        "email": "user@gmail.com",
+        "from_date": "2020-01-01",
+        "to_date": "2024-12-31",
+        "password": "Abcdefghi12$"
+    }
+)
+
+# 2. Wait for email (5-15 minutes)
+time.sleep(600)
+
+# 3. Import from Gmail
+response = requests.post(
+    "https://api.casparser.in/v4/inbox/cas",
+    headers={
+        "x-api-key": API_KEY,
+        "x-inbox-token": inbox_token
+    }
+)
+```
+
+### Pattern 2: User-initiated
+
+Let users trigger generation and upload manually:
+
+```jsx
+// Frontend
+const requestCAS = async () => {
+  await fetch('/api/generate-cas', {
+    method: 'POST',
+    body: JSON.stringify({ email: user.email, pan: user.pan })
+  });
+  
+  alert('CAS will arrive in your email in 5-15 minutes. Upload it here when received.');
+};
+```
+
+## Timing expectations
+
+| Step | Duration |
+|------|----------|
+| API request | < 1 second |
+| KFintech processing | 5-15 minutes |
+| Email delivery | Depends on email provider |
+
+## Date range options
+
+```python
+from datetime import datetime, timedelta
+
+# Last 1 year
+requests.post(..., json={
+    "email": "user@example.com",
+    "from_date": (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+    "to_date": datetime.now().strftime("%Y-%m-%d"),
+    "password": "Abcdefghi12$"
+})
+
+# Complete history (50+ years)
+requests.post(..., json={
+    "email": "user@example.com",
+    "from_date": "1970-01-01",
+    "to_date": datetime.now().strftime("%Y-%m-%d"),
+    "password": "Abcdefghi12$"
+})
+```
+
+## Credit usage
+
+| Operation | Credits |
+|-----------|---------|
+| Generate CAS | 0.5 |
+
+## Comparison: CDSL Fetch vs CAS Generator
+
+| Feature | CDSL Fetch | CAS Generator |
+|---------|------------|---------------|
+| **Speed** | Real-time (~20s) | 5-15 minutes |
+| **Data source** | CDSL demat only | KFintech + CAMS (all MFs) |
+| **History** | Current holdings | 50+ years transactions |
+| **User input** | PAN + BO ID + DOB + OTP | Email + date range |
+| **Asset classes** | Demat holdings | Mutual funds |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Gmail Import" icon="envelope" href="/guides/gmail-inbox">
+    Import the generated CAS
+  </Card>
+  <Card title="Parsing Guide" icon="file-pdf" href="/guides/parsing">
+    Parse uploaded CAS files
+  </Card>
+</CardGroup>

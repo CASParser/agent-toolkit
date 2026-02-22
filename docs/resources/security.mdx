@@ -1,0 +1,103 @@
+---
+title: Security
+description: How CAS Parser protects your data. Zero retention, India-hosted, encrypted.
+---
+
+## Data Handling
+
+| Aspect | Policy |
+|--------|--------|
+| **Data Retention** | PDFs deleted immediately after parsing |
+| **Password Storage** | Never stored — used only for decryption |
+| **Response Storage** | Not stored — returned directly to you |
+| **Logs** | Request metadata only (no PII) |
+
+<Note>
+  CAS Parser is a **stateless parsing service**. We process your PDFs and return structured data — we don't store portfolios.
+</Note>
+
+## Infrastructure
+
+| Feature | Details |
+|---------|---------|
+| **Hosting** | India-based infrastructure (AWS Mumbai) |
+| **Encryption** | TLS 1.3 in transit, AES-256 at rest |
+| **Network** | Private VPC, no public database access |
+| **Monitoring** | 24/7 uptime monitoring |
+
+## Fraud Prevention
+
+CAS Parser includes built-in tamper detection:
+
+- **Rejects scanned PDFs** — Only original digital documents accepted
+- **Detects modifications** — Tampered PDFs are rejected
+- **Validates signatures** — Checks PDF digital signatures when present
+
+This makes CAS Parser suitable for **credit underwriting** and **KYC** workflows where document authenticity matters.
+
+## API Security
+
+### Authentication
+
+All API requests require an `x-api-key` header:
+
+```bash
+curl -H "x-api-key: YOUR_API_KEY" https://api.casparser.in/v1/credits
+```
+
+### Access Tokens
+
+For frontend/SDK use, generate short-lived access tokens:
+
+```python
+# Backend
+response = requests.post(
+    "https://api.casparser.in/v1/token",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"expiry_minutes": 30}
+)
+access_token = response.json()["access_token"]  # at_xxx
+
+# Frontend can use this token safely
+```
+
+Access tokens:
+- Cannot generate other tokens
+- Cannot access billing/usage endpoints
+- Expire automatically
+- Can be revoked
+
+### IP Whitelisting
+
+Enterprise plans support IP whitelisting. Contact support to configure.
+
+## Compliance
+
+| Standard | Status |
+|----------|--------|
+| **DPDPA** | Compliant (India Data Protection) |
+| **SOC 2** | In progress |
+| **ISO 27001** | Planned |
+
+## Gmail Inbox Security
+
+For Gmail import:
+
+| Feature | Details |
+|---------|---------|
+| **Scope** | Read-only (cannot send emails) |
+| **OAuth** | Standard Google OAuth 2.0 |
+| **Token Storage** | Encrypted server-side |
+| **Revocation** | User can revoke via `/v4/inbox/disconnect` |
+
+## Reporting Vulnerabilities
+
+Found a security issue? Email [security@casparser.in](mailto:security@casparser.in).
+
+We respond to reports within 24 hours and follow responsible disclosure practices.
+
+## Questions?
+
+<Card title="Contact Support" icon="envelope" href="mailto:sameer@casparser.in">
+  Email sameer@casparser.in for security questions
+</Card>

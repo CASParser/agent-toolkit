@@ -1,0 +1,249 @@
+---
+title: FAQ
+description: Frequently asked questions about CAS Parser API, pricing, and integration.
+---
+
+## General
+
+<Accordion title="What is CAS Parser?">
+CAS Parser is an API that extracts structured data from Indian financial portfolio statements (CAS PDFs). It supports CDSL, NSDL, CAMS, and KFintech formats.
+</Accordion>
+
+<Accordion title="Who uses CAS Parser?">
+- **Fintech apps** — Portfolio tracking, wealth management
+- **Banks** — Client onboarding, KYC verification
+- **Tax platforms** — Capital gains calculation
+- **Research firms** — Portfolio analysis
+- **Internal audit** — Compliance and verification
+</Accordion>
+
+<Accordion title="What asset classes are supported?">
+CAS Parser extracts **9 asset classes**:
+1. Equities
+2. Mutual Funds (demat & non-demat)
+3. Corporate Bonds
+4. Government Securities
+5. AIFs (Alternative Investment Funds)
+6. ETFs
+7. Insurance
+8. NPS (National Pension System)
+9. Contract Notes (broker trades)
+</Accordion>
+
+## Pricing & Credits
+
+<Accordion title="How much does it cost?">
+| Plan | Credits/Month | Price |
+|------|---------------|-------|
+| **Free** | 10 | ₹0 |
+| **Lite 50** | 50 | ₹999/month |
+| **Pro 200** | 200 | ₹3,500/month |
+| **Ultra 750** | 750 | ₹10,500/month |
+
+[View full pricing](https://casparser.in/pricing)
+</Accordion>
+
+<Accordion title="What counts as 1 credit?">
+| Operation | Credits |
+|-----------|---------|
+| CAS parsing (any type) | 1.0 |
+| Contract note parsing | 0.5 |
+| CDSL OTP fetch | 1.5 |
+| KFintech CAS generation | 0.5 |
+| Gmail inbox (per file) | 0.2 |
+</Accordion>
+
+<Accordion title="Do credits roll over?">
+No. Credits reset monthly on your billing date. Unused credits don't carry forward.
+</Accordion>
+
+<Accordion title="Can I get a refund?">
+We offer a 7-day money-back guarantee for annual plans. Monthly plans are non-refundable.
+</Accordion>
+
+## Technical
+
+<Accordion title="What PDF formats are supported?">
+**Supported:**
+- Original digital PDFs from CDSL, NSDL, CAMS, KFintech
+- Password-protected PDFs
+
+**Not supported:**
+- Scanned PDFs (no OCR)
+- Photographed documents
+- Tampered or modified PDFs
+</Accordion>
+
+<Accordion title="What's the password for my CAS PDF?">
+| CAS Type | Password |
+|----------|----------|
+| **CDSL eCAS** | Encrypted PAN (varies, check email) |
+| **NSDL eCAS** | Encrypted PAN (varies, check email) |
+| **CAMS CAS** | Your PAN number |
+| **KFintech CAS** | Your PAN number |
+
+The password is typically mentioned in the email that delivered the CAS.
+</Accordion>
+
+<Accordion title="How long does parsing take?">
+| Operation | Duration |
+|-----------|----------|
+| CAS parsing | 5-30 seconds |
+| CDSL OTP fetch (Step 1) | 15-20 seconds |
+| CDSL OTP fetch (Step 2) | 2-5 seconds |
+| KFintech generation | 5-15 minutes (async) |
+</Accordion>
+
+<Accordion title="What's the maximum PDF size?">
+10MB per file. Larger files will be rejected.
+</Accordion>
+
+<Accordion title="Do you store my PDFs?">
+No. PDFs are deleted immediately after parsing. We don't store any uploaded files.
+</Accordion>
+
+<Accordion title="Is my data secure?">
+Yes. We use:
+- TLS 1.3 encryption in transit
+- AES-256 encryption at rest
+- India-hosted infrastructure (AWS Mumbai)
+- No data retention after parsing
+- SOC 2 compliance (in progress)
+
+[Read more about security](/resources/security)
+</Accordion>
+
+## Integration
+
+<Accordion title="Which programming languages are supported?">
+CAS Parser is a REST API — works with any language that can make HTTP requests.
+
+**Official SDKs:**
+- Portfolio Connect SDK (React, Next.js, vanilla JS)
+
+**Community examples:**
+- Python (requests)
+- Node.js (fetch, axios)
+- PHP, Ruby, Go, Java, .NET
+
+[View examples](/quickstart)
+</Accordion>
+
+<Accordion title="Can I use it in the frontend?">
+Yes, but use **access tokens** instead of API keys:
+
+1. Generate token from your backend (`POST /v1/token`)
+2. Pass `at_` token to frontend
+3. Use Portfolio Connect SDK for best UX
+
+[Learn about authentication](/learn/authentication)
+</Accordion>
+
+<Accordion title="How do I test without consuming credits?">
+Use the sandbox API key:
+
+```
+sandbox-with-json-responses
+```
+
+Returns sample data for all endpoints. Rate limited to 10 requests/minute.
+
+[Sandbox guide](/resources/sandbox)
+</Accordion>
+
+<Accordion title="What's the rate limit?">
+- **Standard plans:** 60 requests/minute
+- **Enterprise:** Custom limits
+</Accordion>
+
+## Features
+
+<Accordion title="Can I fetch CAS directly from CDSL?">
+Yes. Use the **CDSL OTP Fetch** feature:
+
+1. `POST /v4/cdsl/fetch` — Request OTP
+2. User enters OTP from SMS
+3. `POST /v4/cdsl/fetch/{session_id}/verify` — Get CAS
+
+[CDSL Fetch guide](/guides/cdsl-fetch)
+</Accordion>
+
+<Accordion title="Can I import CAS from Gmail?">
+Yes. The **Gmail Inbox Import** feature uses OAuth to import CAS files directly from user email.
+
+[Gmail Import guide](/guides/gmail-inbox)
+</Accordion>
+
+<Accordion title="Can I request CAS generation?">
+Yes. Use the **KFintech CAS Generator** to trigger email mailback:
+
+```python
+POST /v4/kfintech/generate
+```
+
+The CAS is emailed to the user within 5-15 minutes.
+
+[CAS Generator guide](/guides/cas-generator)
+</Accordion>
+
+<Accordion title="Do you support contract notes?">
+Yes. Parse broker contract notes from:
+- Zerodha
+- Groww
+- Upstox
+- ICICI Direct
+
+[Contract Notes guide](/guides/contract-notes)
+</Accordion>
+
+## Support
+
+<Accordion title="How do I get help?">
+- **Email:** [sameer@casparser.in](mailto:sameer@casparser.in) (< 24hr response)
+- **AI Assistant:** [PortfolioGPT](https://chatgpt.com/g/g-698778fc35f881919a8e57c537e211c6-india-portfoliogpt-powered-by-casparser)
+- **Documentation:** You're reading it!
+
+[Contact support](/resources/support)
+</Accordion>
+
+<Accordion title="Do you offer custom development?">
+Yes. Enterprise customers can request:
+- Custom integrations
+- On-premise deployment
+- White-label solutions
+- Dedicated support
+
+Email [sameer@casparser.in](mailto:sameer@casparser.in) for enterprise inquiries.
+</Accordion>
+
+<Accordion title="What if parsing fails?">
+1. Check the error message in the response
+2. Verify PDF password (check CAS email)
+3. Ensure PDF is original (not scanned)
+4. Contact support with the `X-Request-ID` header
+
+[Error handling guide](/learn/error-handling)
+</Accordion>
+
+## Compliance
+
+<Accordion title="Is CAS Parser RBI approved?">
+CAS Parser is a **parsing service**, not a financial service. We don't require RBI approval.
+
+We parse publicly available CAS files that investors already possess.
+</Accordion>
+
+<Accordion title="Is it DPDPA compliant?">
+Yes. We comply with India's Digital Personal Data Protection Act (DPDPA):
+- No data retention after parsing
+- User consent required for Gmail OAuth
+- Data hosted in India
+- Encrypted storage and transmission
+</Accordion>
+
+<Accordion title="Can I use it for credit underwriting?">
+Yes. CAS Parser includes **tamper detection** — modified or scanned PDFs are rejected. This makes it suitable for:
+- Loan underwriting
+- KYC verification
+- Credit assessment
+</Accordion>

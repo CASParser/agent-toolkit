@@ -1,0 +1,15 @@
+<svg width="800" height="200" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="200" fill="#0F172A"/>
+  <rect x="50" y="50" width="100" height="100" rx="12" fill="#3B82F6" opacity="0.15"/>
+  <rect x="180" y="50" width="100" height="100" rx="12" fill="#3B82F6" opacity="0.2"/>
+  <rect x="310" y="50" width="100" height="100" rx="12" fill="#3B82F6" opacity="0.25"/>
+  <rect x="440" y="50" width="100" height="100" rx="12" fill="#3B82F6" opacity="0.3"/>
+  <text x="100" y="110" font-family="system-ui" font-size="14" fill="#60A5FA" text-anchor="middle">CDSL</text>
+  <text x="230" y="110" font-family="system-ui" font-size="14" fill="#60A5FA" text-anchor="middle">NSDL</text>
+  <text x="360" y="110" font-family="system-ui" font-size="14" fill="#60A5FA" text-anchor="middle">CAMS</text>
+  <text x="490" y="110" font-family="system-ui" font-size="14" fill="#60A5FA" text-anchor="middle">KFintech</text>
+  <path d="M550 100 L620 100" stroke="#60A5FA" stroke-width="2" stroke-dasharray="4"/>
+  <rect x="630" y="60" width="120" height="80" rx="8" fill="#3B82F6"/>
+  <text x="690" y="100" font-family="system-ui" font-size="12" fill="white" text-anchor="middle" font-weight="600">Unified JSON</text>
+  <text x="690" y="118" font-family="system-ui" font-size="10" fill="white" text-anchor="middle" opacity="0.8">API Response</text>
+</svg>

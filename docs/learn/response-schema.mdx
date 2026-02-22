@@ -1,0 +1,316 @@
+---
+title: Response Schema
+description: Complete reference for CAS Parser API response structure. Understand every field in the JSON output.
+---
+
+## Overview
+
+All CAS parsing endpoints return a unified JSON structure regardless of source (CDSL, NSDL, CAMS, KFintech).
+
+## Top-Level Structure
+
+```json
+{
+  "status": "success",
+  "cas_type": "cdsl",
+  "meta": { ... },
+  "investor": { ... },
+  "summary": { ... },
+  "demat_accounts": [ ... ],
+  "mutual_funds": [ ... ],
+  "insurance": [ ... ],
+  "nps": [ ... ]
+}
+```
+
+## Status Field
+
+| Value | Description |
+|-------|-------------|
+| `success` | Parsing completed successfully |
+| `failed` | Parsing failed (see `msg` field) |
+
+## Meta Object
+
+```json
+{
+  "meta": {
+    "cas_type": "cdsl",
+    "statement_date": "2024-01-31",
+    "generated_on": "2024-02-01T10:30:00Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cas_type` | string | `cdsl`, `nsdl`, or `cams_kfintech` |
+| `statement_date` | string | Date of the statement (YYYY-MM-DD) |
+| `generated_on` | string | When the CAS was generated (ISO 8601) |
+
+## Investor Object
+
+```json
+{
+  "investor": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "pan": "ABCDE1234F",
+    "mobile": "9876543210",
+    "address": "123 Main St, Mumbai 400001"
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Full name |
+| `email` | string | No | Email address |
+| `pan` | string | Yes | PAN number |
+| `mobile` | string | No | Mobile number |
+| `address` | string | No | Full address |
+
+## Summary Object
+
+```json
+{
+  "summary": {
+    "total_value": 2547832.50,
+    "as_on_date": "2024-01-15",
+    "accounts": {
+      "demat_accounts": 2,
+      "mutual_fund_folios": 5,
+      "insurance_policies": 1,
+      "nps_accounts": 1
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_value` | number | Total portfolio value in ₹ |
+| `as_on_date` | string | Valuation date (YYYY-MM-DD) |
+| `accounts` | object | Count of each account type |
+
+## Demat Accounts Array
+
+```json
+{
+  "demat_accounts": [
+    {
+      "dp_id": "12345678",
+      "dp_name": "HDFC Bank Limited",
+      "client_id": "1234567890123456",
+      "total_value": 1500000.00,
+      "equities": [ ... ],
+      "corporate_bonds": [ ... ],
+      "mutual_funds": [ ... ],
+      "aifs": [ ... ],
+      "etfs": [ ... ],
+      "g_secs": [ ... ]
+    }
+  ]
+}
+```
+
+### Demat Account Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dp_id` | string | Depository Participant ID (8 digits) |
+| `dp_name` | string | DP name (e.g., "HDFC Bank") |
+| `client_id` | string | Client ID (16 digits) |
+| `total_value` | number | Total value of this account |
+
+### Equity Object
+
+```json
+{
+  "isin": "INE002A01018",
+  "name": "Reliance Industries Ltd",
+  "units": 100,
+  "current_value": 250000.00,
+  "market_price": 2500.00,
+  "transactions": [
+    {
+      "date": "2023-06-15",
+      "type": "BUY",
+      "quantity": 50,
+      "price": 2400.00,
+      "value": 120000.00
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `isin` | string | ISIN code (12 chars) |
+| `name` | string | Security name |
+| `units` | number | Number of shares held |
+| `current_value` | number | Current market value |
+| `market_price` | number | Price per share |
+| `transactions` | array | Transaction history (optional) |
+
+### Corporate Bond Object
+
+```json
+{
+  "isin": "INE123A01234",
+  "company_name": "HDFC Ltd",
+  "number_of_bonds": 10,
+  "coupon_rate": "8.5%",
+  "maturity_date": "2027-12-31",
+  "face_value": 1000,
+  "market_value": 1050,
+  "value": 10500
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `isin` | string | ISIN code |
+| `company_name` | string | Issuer name |
+| `number_of_bonds` | number | Quantity held |
+| `coupon_rate` | string | Interest rate |
+| `maturity_date` | string | Maturity date (YYYY-MM-DD) |
+| `face_value` | number | Face value per bond |
+| `market_value` | number | Market value per bond |
+| `value` | number | Total value |
+
+## Mutual Funds Array
+
+```json
+{
+  "mutual_funds": [
+    {
+      "folio": "1234567890",
+      "amc": "HDFC Mutual Fund",
+      "pan": "ABCDE1234F",
+      "schemes": [
+        {
+          "scheme": "HDFC Equity Fund - Growth",
+          "isin": "INF179K01234",
+          "units": 1000.50,
+          "nav": 450.75,
+          "value": 451000.88,
+          "transactions": [ ... ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Mutual Fund Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `folio` | string | Folio number |
+| `amc` | string | Asset Management Company |
+| `pan` | string | Investor PAN |
+| `schemes` | array | List of schemes in this folio |
+
+### Scheme Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scheme` | string | Scheme name |
+| `isin` | string | ISIN code |
+| `units` | number | Units held |
+| `nav` | number | Net Asset Value |
+| `value` | number | Current value (units × NAV) |
+| `transactions` | array | Transaction history |
+
+### Transaction Object
+
+```json
+{
+  "date": "2023-06-15",
+  "type": "PURCHASE",
+  "amount": 10000.00,
+  "units": 22.18,
+  "nav": 450.86,
+  "balance": 1000.50
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Transaction date (YYYY-MM-DD) |
+| `type` | string | `PURCHASE`, `REDEMPTION`, `DIVIDEND`, etc. |
+| `amount` | number | Transaction amount |
+| `units` | number | Units transacted |
+| `nav` | number | NAV at transaction |
+| `balance` | number | Units balance after transaction |
+
+## Insurance Array
+
+```json
+{
+  "insurance": [
+    {
+      "policy_number": "POL123456",
+      "provider": "HDFC Life",
+      "plan": "Term Insurance",
+      "sum_assured": 10000000,
+      "premium": 15000,
+      "maturity_date": "2045-12-31"
+    }
+  ]
+}
+```
+
+## NPS Array
+
+```json
+{
+  "nps": [
+    {
+      "pran": "123456789012",
+      "tier": "Tier I",
+      "fund_type": "Equity",
+      "units": 5000.50,
+      "nav": 45.67,
+      "value": 228472.84
+    }
+  ]
+}
+```
+
+## Error Response
+
+```json
+{
+  "status": "failed",
+  "msg": "Invalid password for PDF",
+  "code": "INVALID_PASSWORD"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `failed` for errors |
+| `msg` | string | Human-readable error message |
+| `code` | string | Error code for programmatic handling |
+
+## Common Error Codes
+
+| Code | Description | Solution |
+|------|-------------|----------|
+| `INVALID_PASSWORD` | Wrong PDF password | Check PAN format |
+| `INVALID_PDF` | Corrupted/scanned PDF | Use original digital PDF |
+| `UNSUPPORTED_FORMAT` | Not a CAS file | Upload CAS, not bank statement |
+| `PARSING_ERROR` | Internal parsing failure | Contact support with request ID |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart/python">
+    Start parsing CAS files
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/learn/error-handling">
+    Handle errors gracefully
+  </Card>
+</CardGroup>

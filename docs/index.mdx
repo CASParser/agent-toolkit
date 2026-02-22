@@ -1,0 +1,71 @@
+---
+title: Introduction
+description: The portfolio import API for Indian fintech. Parse CAS PDFs, fetch holdings via OTP, import from Gmail. 9 asset classes. 5-minute integration.
+---
+
+CAS Parser is the portfolio import API for Indian fintech.
+
+## Quickstart
+
+<CardGroup cols={2}>
+  <Card title="Python" icon="python" href="/quickstart/python">
+    Parse your first CAS in 5 lines of code
+  </Card>
+  <Card title="Node.js" icon="node-js" href="/quickstart/nodejs">
+    Get started with JavaScript/TypeScript
+  </Card>
+  <Card title="cURL" icon="terminal" href="/quickstart/curl">
+    Make API calls from the command line
+  </Card>
+  <Card title="Portfolio Connect SDK" icon="puzzle-piece" href="/sdk/portfolio-connect">
+    Drop-in React widget for frontend apps
+  </Card>
+</CardGroup>
+
+## How it works
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Input         │     │   CAS Parser    │     │   Output        │
+├─────────────────┤     ├─────────────────┤     ├─────────────────┤
+│ • PDF Upload    │────▶│ • CDSL Parser   │────▶│ • Equities      │
+│ • Gmail Import  │     │ • NSDL Parser   │     │ • Mutual Funds  │
+│ • CDSL OTP      │     │ • CAMS Parser   │     │ • Bonds & AIFs  │
+│ • KFintech Gen  │     │ • KFintech      │     │ • NPS/Insurance │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+                                                 Unified JSON
+```
+
+**One API, any CAS format.** Send a PDF, get structured JSON. Works with all Indian depositories and registrars — CDSL, NSDL, CAMS, KFintech.
+
+## Explore
+
+<CardGroup cols={2}>
+  <Card title="Parsing CAS PDFs" icon="file-pdf" href="/guides/parsing">
+    Upload PDFs and extract portfolio data
+  </Card>
+  <Card title="Gmail Inbox Import" icon="envelope" href="/guides/gmail-inbox">
+    Import CAS files directly from user email
+  </Card>
+  <Card title="CDSL OTP Fetch" icon="shield-check" href="/guides/cdsl-fetch">
+    Real-time holdings via OTP verification
+  </Card>
+  <Card title="CAS Generator" icon="rotate" href="/guides/cas-generator">
+    Request CAS statements programmatically
+  </Card>
+</CardGroup>
+
+## Why CAS Parser?
+
+| | CAS Parser | Account Aggregator | Build In-House |
+|---|---|---|---|
+| **Time to market** | 5 minutes | 5-10 months | 3-6 months |
+| **Monthly cost** | ₹999 | ₹5-25 lakhs setup | ₹10-50 lakhs setup |
+| **Regulatory approval** | None needed | Required | None |
+| **Asset classes** | 9 | All financial | Custom |
+
+<Card title="Start Free Trial" icon="rocket" href="https://app.casparser.in">
+  10 free credits/month. No credit card required.
+</Card>

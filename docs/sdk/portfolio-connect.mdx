@@ -1,0 +1,165 @@
+---
+title: Portfolio Connect SDK
+description: Drop-in React widget for portfolio import. PDF upload, Gmail inbox, CDSL OTP — all in one modal.
+---
+
+Portfolio Connect is a white-label UI widget for importing Indian portfolios. One component handles file upload, Gmail import, and CDSL OTP fetch.
+
+<Card title="Live Demo" icon="eye" href="https://connect.casparser.in">
+  Try the widget at connect.casparser.in
+</Card>
+
+```
+┌────────────────────────────────────────────────────────┐
+│                  Portfolio Connect                      │
+├────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
+│  │  Upload  │  │  Gmail   │  │   CDSL   │              │
+│  │   PDF    │  │  Import  │  │   OTP    │              │
+│  └──────────┘  └──────────┘  └──────────┘              │
+│                                                         │
+│  Drop your CAS PDF here or click to browse             │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │                                                 │   │
+│  │               [Your branding here]              │   │
+│  │                                                 │   │
+│  └─────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Supported Statements
+
+| Statement | Covers | Methods |
+|-----------|--------|---------|
+| **CAMS / KFintech CAS** | Mutual Funds | PDF upload, Email request via KFintech, Gmail Inbox integration |
+| **CDSL CAS** | Stocks, ETFs, Bonds, SGBs, Demat/Non-Demat Mutual Funds, AIFs | PDF upload, OTP fetch, Gmail Inbox integration |
+| **NSDL CAS** | Stocks, ETFs, Bonds, SGBs, Demat/Non-Demat Mutual Funds, AIFs | PDF upload, Gmail Inbox integration |
+
+## Installation
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @cas-parser/connect
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add @cas-parser/connect
+    ```
+  </Tab>
+  <Tab title="CDN">
+    ```html
+    <script src="https://cdn.jsdelivr.net/npm/@cas-parser/connect/dist/portfolio-connect.standalone.min.js"></script>
+    ```
+  </Tab>
+</Tabs>
+
+## Quick Start
+
+### React / Next.js
+
+```jsx
+import { PortfolioConnect } from '@cas-parser/connect';
+
+function App() {
+  return (
+    <PortfolioConnect
+      accessToken="your_access_token"
+      config={{
+        enableGenerator: true,   // MF email fetch
+        enableCdslFetch: true,   // CDSL OTP fetch
+        enableInbox: true,       // Gmail inbox import
+      }}
+      onSuccess={(data) => console.log(data.holdings)}
+    >
+      {({ open }) => <button onClick={open}>Import Investments</button>}
+    </PortfolioConnect>
+  );
+}
+```
+
+### Vanilla JavaScript
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@cas-parser/connect/dist/portfolio-connect.standalone.min.js"></script>
+<button id="import-btn">Import Portfolio</button>
+
+<script>
+document.getElementById('import-btn').onclick = async () => {
+  try {
+    const { data, metadata } = await PortfolioConnect.open({
+      accessToken: 'your_access_token',
+      config: { enableCdslFetch: true }
+    });
+    console.log('Holdings:', data.holdings);
+  } catch (error) {
+    if (error.message === 'Widget closed by user') {
+      console.log('User cancelled');
+    } else {
+      console.error('Error:', error.message);
+    }
+  }
+};
+</script>
+```
+
+## Access Tokens
+
+<Warning>
+**Never expose your API key to the frontend.** Generate short-lived access tokens from your backend.
+</Warning>
+
+```python
+# Backend: Generate access token
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v1/token",
+    headers={"x-api-key": "your_api_key"},
+    json={"expiry_minutes": 60}
+)
+access_token = response.json()["access_token"]
+# Pass this at_ prefixed token to your frontend
+```
+
+Access tokens:
+- Are prefixed with `at_` for easy identification
+- Valid for up to 60 minutes
+- Can be used in place of API keys on all v4 endpoints
+- Cannot be used to generate other access tokens
+
+## Response Data
+
+See full schema: [API Reference](/api-reference/introduction)
+
+```typescript
+interface ParsedData {
+  cas_type: 'CAMS_KFINTECH' | 'CDSL' | 'NSDL';
+  status: 'success' | 'failed';
+  investor_info?: {
+    name: string;
+    email?: string;
+    pan?: string;
+  };
+  summary?: {
+    total_value: number;
+    as_on_date: string;
+  };
+  // ... folios, holdings, etc.
+}
+```
+
+## Security
+
+| Feature | Details |
+|---------|---------|
+| **Data Hosting** | 100% India-hosted infrastructure |
+| **Encryption** | TLS 1.3 in transit, AES-256 at rest |
+| **Data Retention** | PDFs deleted immediately after parsing |
+| **Credentials** | We never store user passwords |
+
+<Card title="Full Configuration Guide" icon="book" href="/sdk/configuration">
+  Complete configuration options, events, error handling, and framework examples
+</Card>

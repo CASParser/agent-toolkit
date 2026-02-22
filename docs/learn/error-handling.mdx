@@ -1,0 +1,279 @@
+---
+title: Error Handling
+description: Best practices for handling errors in CAS Parser API. Retry logic, timeouts, and error codes.
+---
+
+## Error Response Format
+
+All errors return a consistent structure:
+
+```json
+{
+  "status": "failed",
+  "msg": "Invalid password for PDF",
+  "code": "INVALID_PASSWORD"
+}
+```
+
+## HTTP Status Codes
+
+| Status | Meaning | Retry? |
+|--------|---------|--------|
+| **200** | Success | N/A |
+| **400** | Bad request | No — fix request |
+| **401** | Invalid API key | No — check credentials |
+| **402** | Insufficient credits | No — upgrade plan |
+| **422** | Invalid PDF/password | No — check inputs |
+| **429** | Rate limited | Yes — exponential backoff |
+| **500** | Server error | Yes — retry with backoff |
+| **502/503** | Service unavailable | Yes — retry with backoff |
+
+## Error Codes
+
+### Client Errors (4xx)
+
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `INVALID_API_KEY` | 401 | API key missing or invalid | Check `x-api-key` header |
+| `INSUFFICIENT_CREDITS` | 402 | No credits remaining | Upgrade plan or wait for reset |
+| `INVALID_PASSWORD` | 422 | Wrong PDF password | Verify PAN format for CDSL/NSDL |
+| `INVALID_PDF` | 422 | Corrupted or scanned PDF | Use original digital PDF |
+| `UNSUPPORTED_FORMAT` | 422 | Not a CAS file | Upload CAS, not bank statement |
+| `FILE_TOO_LARGE` | 422 | PDF exceeds 10MB | Compress or split PDF |
+| `RATE_LIMITED` | 429 | Too many requests | Wait 60s or implement backoff |
+
+### Server Errors (5xx)
+
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `PARSING_ERROR` | 500 | Internal parsing failure | Retry or contact support |
+| `TIMEOUT` | 504 | Request took too long | Retry with longer timeout |
+
+## Retry Logic
+
+### When to Retry
+
+**Retry these errors:**
+- 429 (Rate Limited)
+- 500 (Server Error)
+- 502/503 (Service Unavailable)
+- 504 (Timeout)
+
+**Don't retry these:**
+- 400 (Bad Request)
+- 401 (Invalid API Key)
+- 402 (Insufficient Credits)
+- 422 (Invalid PDF/Password)
+
+### Exponential Backoff
+
+<CodeGroup>
+```python Python
+import requests
+import time
+
+def parse_with_retry(file_path, password, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                "https://api.casparser.in/v4/smart/parse",
+                headers={"x-api-key": API_KEY},
+                files={"file": open(file_path, "rb")},
+                data={"password": password},
+                timeout=60
+            )
+            
+            # Don't retry client errors
+            if 400 <= response.status_code < 500 and response.status_code != 429:
+                response.raise_for_status()
+            
+            # Retry server errors and rate limits
+            if response.status_code >= 500 or response.status_code == 429:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1s, 2s, 4s
+                    time.sleep(wait_time)
+                    continue
+                response.raise_for_status()
+            
+            return response.json()
+            
+        except requests.exceptions.Timeout:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+                continue
+            raise
+    
+    raise Exception("Max retries exceeded")
+```
+
+```javascript Node.js
+async function parseWithRetry(filePath, password, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const form = new FormData();
+      form.append('file', fs.createReadStream(filePath));
+      form.append('password', password);
+      
+      const response = await fetch('https://api.casparser.in/v4/smart/parse', {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY },
+        body: form,
+        signal: AbortSignal.timeout(60000)
+      });
+      
+      // Don't retry client errors (except 429)
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new Error(`Client error: ${response.status}`);
+      }
+      
+      // Retry server errors and rate limits
+      if (response.status >= 500 || response.status === 429) {
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 2 ** attempt * 1000));
+          continue;
+        }
+        throw new Error(`Server error: ${response.status}`);
+      }
+      
+      return await response.json();
+      
+    } catch (error) {
+      if (error.name === 'TimeoutError' && attempt < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, 2 ** attempt * 1000));
+        continue;
+      }
+      throw error;
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+</CodeGroup>
+
+## Timeout Configuration
+
+| Operation | Recommended Timeout |
+|-----------|---------------------|
+| CAS parsing | 60 seconds |
+| CDSL fetch (Step 1) | 50 seconds |
+| CDSL fetch (Step 2) | 10 seconds |
+| Credits check | 5 seconds |
+| Token generation | 5 seconds |
+
+<Warning>
+  CDSL fetch Step 1 takes **15-20 seconds** due to automated captcha solving. Set timeout to at least 50s.
+</Warning>
+
+## Graceful Degradation
+
+```python
+def parse_cas_safe(file_path, password):
+    """Parse CAS with graceful error handling."""
+    try:
+        response = requests.post(
+            "https://api.casparser.in/v4/smart/parse",
+            headers={"x-api-key": API_KEY},
+            files={"file": open(file_path, "rb")},
+            data={"password": password},
+            timeout=60
+        )
+        
+        data = response.json()
+        
+        if data.get("status") == "failed":
+            error_code = data.get("code", "UNKNOWN")
+            
+            if error_code == "INVALID_PASSWORD":
+                return {
+                    "error": "Wrong password. Please check your CAS email for the correct password.",
+                    "retry": False
+                }
+            elif error_code == "INVALID_PDF":
+                return {
+                    "error": "Invalid PDF. Please upload the original digital PDF, not a scanned copy.",
+                    "retry": False
+                }
+            elif error_code == "INSUFFICIENT_CREDITS":
+                return {
+                    "error": "No credits remaining. Please upgrade your plan.",
+                    "retry": False,
+                    "upgrade_url": "https://app.casparser.in/billing"
+                }
+            else:
+                return {
+                    "error": f"Parsing failed: {data.get('msg')}",
+                    "retry": True
+                }
+        
+        return {"success": True, "data": data}
+        
+    except requests.exceptions.Timeout:
+        return {
+            "error": "Request timed out. The PDF may be too large or complex.",
+            "retry": True
+        }
+    except requests.exceptions.ConnectionError:
+        return {
+            "error": "Network error. Please check your internet connection.",
+            "retry": True
+        }
+    except Exception as e:
+        return {
+            "error": f"Unexpected error: {str(e)}",
+            "retry": False
+        }
+```
+
+## Request Tracing
+
+Every response includes an `X-Request-ID` header:
+
+```python
+response = requests.post(...)
+request_id = response.headers.get("X-Request-ID")
+print(f"Request ID: {request_id}")  # req_2xYz7KpL8mN3Ab
+```
+
+**Include this ID when contacting support** for faster resolution.
+
+## Monitoring & Alerts
+
+### Track Error Rates
+
+```python
+import logging
+
+def parse_with_logging(file_path, password):
+    request_id = None
+    try:
+        response = requests.post(...)
+        request_id = response.headers.get("X-Request-ID")
+        
+        data = response.json()
+        if data.get("status") == "failed":
+            logging.error(f"Parsing failed: {data.get('msg')} (Request ID: {request_id})")
+        
+        return data
+    except Exception as e:
+        logging.error(f"Exception: {str(e)} (Request ID: {request_id})")
+        raise
+```
+
+### Set Up Alerts
+
+Monitor these metrics:
+- **Error rate** — Alert if greater than 5% of requests fail
+- **Timeout rate** — Alert if greater than 2% timeout
+- **Credit balance** — Alert when less than 10 credits remain
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Response Schema" icon="file-code" href="/learn/response-schema">
+    Understand the response structure
+  </Card>
+  <Card title="Support" icon="life-ring" href="/resources/support">
+    Contact support
+  </Card>
+</CardGroup>
