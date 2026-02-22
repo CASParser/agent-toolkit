@@ -15,16 +15,20 @@ flowchart LR
 
 ## Supported CAS types
 
-| Source | Format | Password |
-|--------|--------|----------|
-| **CDSL** | eCAS from myeasicm.com | Encrypted PAN |
-| **NSDL** | eCAS from nsdlcas.nsdl.com | Encrypted PAN |
-| **CAMS** | CAS from camsonline.com | PAN number |
-| **KFintech** | CAS from kfintech.com | PAN number |
+| Source | Format | Password | Coverage |
+|--------|--------|----------|----------|
+| **CDSL** | eCAS from myeasicm.com | Encrypted PAN | All holdings (CDSL + NSDL) |
+| **NSDL** | eCAS from nsdlcas.nsdl.com | Encrypted PAN | All holdings (NSDL + CDSL) |
+| **CAMS** | CAS from camsonline.com | PAN number | Mutual funds only |
+| **KFintech** | CAS from kfintech.com | PAN number | Mutual funds only |
 
 <Tip>
   Use `/v4/smart/parse` — it auto-detects the CAS type and applies the correct parser.
 </Tip>
+
+<Note>
+  **Cross-depository coverage:** CDSL and NSDL eCAS statements contain holdings from **both** depositories (CDSL + NSDL), not just the issuing depository. This includes demat and non-demat assets across all accounts.
+</Note>
 
 ## Parse a PDF file
 

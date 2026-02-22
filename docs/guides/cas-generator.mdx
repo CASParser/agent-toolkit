@@ -144,10 +144,14 @@ requests.post(..., json={
 | Feature | CDSL Fetch | CAS Generator |
 |---------|------------|---------------|
 | **Speed** | Real-time (~20s) | 1-2 minutes |
-| **Data source** | CDSL demat only | KFintech + CAMS (all MFs) |
+| **Data source** | CDSL eCAS (all holdings) | KFintech + CAMS (all MFs) |
 | **History** | Current holdings | 50+ years transactions |
 | **User input** | PAN + BO ID + DOB + OTP | Email + date range |
-| **Asset classes** | Demat holdings | Mutual funds |
+| **Asset classes** | Demat + Non-Demat (stocks, bonds, MFs, etc.) | Mutual funds |
+
+<Note>
+  **Important:** CDSL eCAS statements contain holdings from **both CDSL and NSDL** depositories. Similarly, NSDL eCAS contains both NSDL and CDSL holdings. This is a consolidated view across all depositories, not limited to the issuing depository.
+</Note>
 
 ## Next steps
 
