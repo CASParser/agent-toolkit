@@ -55,8 +55,11 @@ tags:
 
 paths:
   # ============================================
-  # Authorization Endpoints
+  # Account & Authorization Endpoints
+  # New paths: /v1/credits, /v1/usage, /v1/usage/summary, /v1/token, /v1/token/verify
+  # Legacy paths still supported: /credits, /logs, /logs/summary, /v1/access-token, /v1/verify-token
   # ============================================
+  
   /v1/credits:
     post:
       tags:
@@ -134,6 +137,8 @@ paths:
         
         Returns a list of API calls with timestamps, features used, status codes, and credits consumed.
         Useful for monitoring usage patterns and debugging.
+        
+        **Legacy path:** `/logs` (still supported)
       operationId: getUsageLogs
       security:
         - ApiKeyAuth: []
@@ -226,6 +231,8 @@ paths:
         Get aggregated usage statistics grouped by feature.
         
         Useful for understanding which API features are being used most and tracking usage trends.
+        
+        **Legacy path:** `/logs/summary` (still supported)
       operationId: getUsageSummary
       security:
         - ApiKeyAuth: []
@@ -308,6 +315,8 @@ paths:
         Generate a short-lived access token from your API key.
         
         **Use this endpoint from your backend** to create tokens that can be safely passed to frontend/SDK.
+        
+        **Legacy path:** `/v1/access-token` (still supported)
         
         Access tokens:
         - Are prefixed with `at_` for easy identification
