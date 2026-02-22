@@ -7,11 +7,10 @@ description: Parse broker contract notes from Zerodha, Groww, Upstox, and ICICI 
 
 Contract notes are daily trade confirmations from brokers. CAS Parser extracts structured trade data from these PDFs.
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Contract Note  │────▶│   CAS Parser    │────▶│  Trade Details  │
-│  PDF (any broker)│     │  Auto-detect    │     │  JSON Response  │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+```mermaid
+flowchart LR
+    A[Contract Note PDF<br/>any broker] --> B[CAS Parser<br/>Auto-detect]
+    B --> C[Trade Details<br/>JSON Response]
 ```
 
 ## Supported Brokers

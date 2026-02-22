@@ -24,18 +24,32 @@ CAS Parser is the portfolio import API for Indian fintech.
 
 ## How it works
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Input         │     │   CAS Parser    │     │   Output        │
-├─────────────────┤     ├─────────────────┤     ├─────────────────┤
-│ • PDF Upload    │────▶│ • CDSL Parser   │────▶│ • Equities      │
-│ • Gmail Import  │     │ • NSDL Parser   │     │ • Mutual Funds  │
-│ • CDSL OTP      │     │ • CAMS Parser   │     │ • Bonds & AIFs  │
-│ • KFintech Gen  │     │ • KFintech      │     │ • NPS/Insurance │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                        │
-                                                        ▼
-                                                 Unified JSON
+```mermaid
+flowchart LR
+    subgraph Input
+        A1[PDF Upload]
+        A2[Gmail Import]
+        A3[CDSL OTP]
+        A4[KFintech Gen]
+    end
+    
+    subgraph "CAS Parser"
+        B1[CDSL Parser]
+        B2[NSDL Parser]
+        B3[CAMS Parser]
+        B4[KFintech Parser]
+    end
+    
+    subgraph Output
+        C1[Equities]
+        C2[Mutual Funds]
+        C3[Bonds & AIFs]
+        C4[NPS/Insurance]
+    end
+    
+    Input --> CAS Parser
+    CAS Parser --> Output
+    Output --> D[Unified JSON]
 ```
 
 **One API, any CAS format.** Send a PDF, get structured JSON. Works with all Indian depositories and registrars — CDSL, NSDL, CAMS, KFintech.

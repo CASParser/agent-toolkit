@@ -7,11 +7,10 @@ description: Upload CAS PDF files and extract structured portfolio data. Support
 
 CAS Parser extracts structured data from Consolidated Account Statement (CAS) PDFs issued by Indian depositories and registrars.
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  CAS PDF    │────▶│  CAS Parser │────▶│ Unified JSON│
-│  (any type) │     │  Smart API  │     │  Response   │
-└─────────────┘     └─────────────┘     └─────────────┘
+```mermaid
+flowchart LR
+    A[CAS PDF<br/>any type] --> B[CAS Parser<br/>Smart API]
+    B --> C[Unified JSON<br/>Response]
 ```
 
 ## Supported CAS types
