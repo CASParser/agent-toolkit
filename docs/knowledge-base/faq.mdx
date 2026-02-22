@@ -48,7 +48,7 @@ CAS Parser extracts **9 asset classes**:
 |-----------|---------|
 | CAS parsing (any type) | 1.0 |
 | Contract note parsing | 0.5 |
-| CDSL OTP fetch | 1.5 |
+| CDSL OTP fetch | 0.5 |
 | KFintech CAS generation | 0.5 |
 | Gmail inbox (per file) | 0.2 |
 </Accordion>
@@ -91,7 +91,7 @@ The password is typically mentioned in the email that delivered the CAS.
 | CAS parsing | 5-30 seconds |
 | CDSL OTP fetch (Step 1) | 15-20 seconds |
 | CDSL OTP fetch (Step 2) | 2-5 seconds |
-| KFintech generation | 5-15 minutes (async) |
+| KFintech generation | 1-2 minutes |
 </Accordion>
 
 <Accordion title="What's the maximum PDF size?">
@@ -181,7 +181,7 @@ Yes. Use the **KFintech CAS Generator** to trigger email mailback:
 POST /v4/kfintech/generate
 ```
 
-The CAS is emailed to the user within 5-15 minutes.
+The CAS is emailed to the user within 1-2 minutes.
 
 [CAS Generator guide](/guides/cas-generator)
 </Accordion>

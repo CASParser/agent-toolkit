@@ -1,6 +1,6 @@
 # CAS Parser Agent Toolkit
 
-A collection of skills, templates, and documentation for AI coding agents to integrate Indian financial portfolio tracking into applications using the [CAS Parser API](https://docs.casparser.in/).
+A collection of skills, templates, and documentation for AI coding agents to integrate Indian financial portfolio tracking into applications using the [CAS Parser API](https://casparser.in/docs/).
 
 ## What is CAS Parser?
 
@@ -180,8 +180,8 @@ Or try specific tasks:
 
 ## Resources
 
-- [CAS Parser Documentation](https://docs.casparser.in/) — Official docs
-- [API Reference](https://docs.casparser.in/reference) — Interactive API reference
+- [CAS Parser Documentation](https://casparser.in/docs/) — Official docs
+- [API Reference](https://casparser.in/docs/api-reference/introduction) — Interactive API reference
 - [CAS Parser Web Portal](https://app.casparser.in) — Try it online
 - [Portfolio Connect SDK](https://www.npmjs.com/package/@cas-parser/connect) — Frontend UI widget (npm)
 - [Node.js / TypeScript SDK](https://www.npmjs.com/package/cas-parser-node) — Official TypeScript API client (npm)

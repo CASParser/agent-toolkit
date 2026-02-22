@@ -74,8 +74,8 @@ requests.post(
     }
 )
 
-# 2. Wait for email (5-15 minutes)
-time.sleep(600)
+# 2. Wait for email (1-2 minutes)
+time.sleep(120)
 
 # 3. Import from Gmail
 response = requests.post(
@@ -99,7 +99,7 @@ const requestCAS = async () => {
     body: JSON.stringify({ email: user.email, pan: user.pan })
   });
   
-  alert('CAS will arrive in your email in 5-15 minutes. Upload it here when received.');
+  alert('CAS will arrive in your email in 1-2 minutes. Upload it here when received.');
 };
 ```
 
@@ -108,7 +108,7 @@ const requestCAS = async () => {
 | Step | Duration |
 |------|----------|
 | API request | < 1 second |
-| KFintech processing | 5-15 minutes |
+| KFintech processing | 1-2 minutes |
 | Email delivery | Depends on email provider |
 
 ## Date range options
@@ -143,7 +143,7 @@ requests.post(..., json={
 
 | Feature | CDSL Fetch | CAS Generator |
 |---------|------------|---------------|
-| **Speed** | Real-time (~20s) | 5-15 minutes |
+| **Speed** | Real-time (~20s) | 1-2 minutes |
 | **Data source** | CDSL demat only | KFintech + CAMS (all MFs) |
 | **History** | Current holdings | 50+ years transactions |
 | **User input** | PAN + BO ID + DOB + OTP | Email + date range |
