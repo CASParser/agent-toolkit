@@ -1,11 +1,13 @@
 ---
-title: CAS Generator
-description: Request CAS statements programmatically via KFintech email mailback. Get 50+ years of portfolio history.
+title: CAS Generator for Mutual Funds
+description: Request mutual fund CAS statements programmatically. Get 50+ years of portfolio history from both KFintech and CAMS RTAs.
 ---
 
 ## Overview
 
-CAS Generator triggers KFintech to email a CAS statement to your user — no manual portal visits needed.
+CAS Generator triggers a mutual fund CAS statement to be emailed to your user — no manual portal visits needed.
+
+**Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership that provides data from both RTAs (Registrar and Transfer Agents), so this endpoint retrieves mutual fund data from both KFintech and CAMS, covering all mutual funds in India.
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -142,9 +144,9 @@ requests.post(..., json={
 | Feature | CDSL Fetch | CAS Generator |
 |---------|------------|---------------|
 | **Speed** | Real-time (~20s) | 5-15 minutes |
-| **Data source** | CDSL demat only | CAMS + KFintech MF |
+| **Data source** | CDSL demat only | KFintech + CAMS (all MFs) |
 | **History** | Current holdings | 50+ years transactions |
-| **User input** | PAN + DOB + OTP | Email + PAN |
+| **User input** | PAN + BO ID + DOB + OTP | Email + date range |
 | **Asset classes** | Demat holdings | Mutual funds |
 
 ## Next steps

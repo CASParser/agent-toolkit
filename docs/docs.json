@@ -145,5 +145,8 @@
       "github": "https://github.com/CASParser",
       "linkedin": "https://linkedin.com/company/cas-parser"
     }
+  },
+  "search": {
+    "prompt": "Ask AI or search docs..."
   }
 }

@@ -604,12 +604,14 @@ paths:
     post:
       tags:
         - CAS Generator
-      summary: KFintech CAS Generator (Email Mailback)
+      summary: CAS Generator for Mutual Funds
       description: |
-        Generate CAS via KFintech mailback. The CAS PDF will be sent to the investor's email.
+        Generate CAS for mutual funds via KFintech email mailback. The CAS PDF will be sent to the investor's email.
+        
+        **Coverage:** KFintech and CAMS have a mutual partnership that provides data from both RTAs (Registrar and Transfer Agents). This endpoint retrieves mutual fund data from both KFintech and CAMS, covering all mutual funds in India.
         
         The investor receives the CAS via email within a few minutes.
-        For instant CAS retrieval, use CDSL Fetch (`/v4/cdsl/fetch`).
+        For instant demat holdings, use CDSL Fetch (`/v4/cdsl/fetch`).
       operationId: kfintechGenerate
       security:
         - ApiKeyAuth: []
