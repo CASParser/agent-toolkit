@@ -41,6 +41,28 @@ tags:
       - Read-only access (we cannot send emails)
       - Tokens are encrypted with server-side secret
       - User can revoke access anytime via `/v4/inbox/disconnect`
+  - name: Inbound Email
+    description: |
+      Create dedicated inbound email addresses for investors to forward their CAS statements.
+      
+      **Use Case:** Your app wants to collect CAS statements from users without requiring OAuth or file upload.
+      
+      **How it works:**
+      1. Call `POST /v4/inbound-email` to create a unique inbound email address
+      2. Display this email to your user: "Forward your CAS statement to ie_xxx@import.casparser.in"
+      3. When user forwards a CAS email, we verify sender authenticity (SPF/DKIM) and call your webhook
+      4. Your webhook receives email metadata + attachment download URLs
+      
+      **Sender Validation:**
+      - Only emails from verified CAS authorities are processed:
+        - CDSL: `eCAS@cdslstatement.com`
+        - NSDL: `NSDL-CAS@nsdl.co.in`
+        - CAMS: `donotreply@camsonline.com`
+        - KFintech: `samfS@kfintech.com`
+      - Emails failing SPF/DKIM/DMARC are rejected
+      - Forwarded emails must contain the original sender in headers
+      
+      **Billing:** 0.2 credits per successfully processed valid email
   - name: Contract Note Parser
     description: Endpoints for parsing Contract Note PDF files from various SEBI brokers like Zerodha, Groww, Upstox, ICICI etc.
   - name: Authorization
@@ -604,14 +626,12 @@ paths:
     post:
       tags:
         - CAS Generator
-      summary: CAS Generator for Mutual Funds
+      summary: KFintech CAS Generator (Email Mailback)
       description: |
-        Generate CAS for mutual funds via KFintech email mailback. The CAS PDF will be sent to the investor's email.
+        Generate CAS via KFintech mailback. The CAS PDF will be sent to the investor's email.
         
-        **Coverage:** KFintech and CAMS have a mutual partnership that provides data from both RTAs (Registrar and Transfer Agents). This endpoint retrieves mutual fund data from both KFintech and CAMS, covering all mutual funds in India.
-        
-        The investor receives the CAS via email within a few minutes.
-        For instant demat holdings, use CDSL Fetch (`/v4/cdsl/fetch`).
+        This is an async operation - the investor receives the CAS via email within a few minutes.
+        For instant CAS retrieval, use CDSL Fetch (`/v4/cdsl/fetch`).
       operationId: kfintechGenerate
       security:
         - ApiKeyAuth: []
@@ -1060,6 +1080,238 @@ paths:
                     example: "Email disconnected successfully"
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Inbound Email Endpoints
+  # ============================================
+  /v4/inbound-email:
+    post:
+      tags:
+        - Inbound Email
+      summary: Create Inbound Email
+      description: |
+        Create a dedicated inbound email address for collecting CAS statements via email forwarding.
+        
+        **How it works:**
+        1. Create an inbound email with your webhook URL
+        2. Display the email address to your user (e.g., "Forward your CAS to ie_xxx@import.casparser.in")
+        3. When an investor forwards a CAS email, we verify the sender and deliver to your webhook
+        
+        **Webhook Delivery:**
+        - We POST to your `callback_url` with JSON body containing files (matching EmailCASFile schema)
+        - Failed deliveries are retried automatically with exponential backoff
+        
+        **Inactivity:**
+        - Inbound emails with no activity in 30 days are marked inactive
+        - Active inbound emails remain operational indefinitely
+      operationId: createInboundEmail
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - callback_url
+              properties:
+                alias:
+                  type: string
+                  minLength: 3
+                  maxLength: 32
+                  pattern: '^[a-z0-9][a-z0-9-]*[a-z0-9]$'
+                  description: |
+                    Optional custom email prefix for user-friendly addresses.
+                    - Must be 3-32 characters
+                    - Alphanumeric + hyphens only
+                    - Must start and end with letter/number
+                    - Example: `john-portfolio@import.casparser.in`
+                    - If omitted, generates random ID like `ie_abc123xyz@import.casparser.in`
+                  example: "john-portfolio"
+                reference:
+                  type: string
+                  maxLength: 256
+                  description: |
+                    Your internal identifier (e.g., user_id, account_id).
+                    Returned in webhook payload for correlation.
+                  example: "user_12345"
+                callback_url:
+                  type: string
+                  format: uri
+                  description: |
+                    Webhook URL where we POST email notifications.
+                    Must be HTTPS in production (HTTP allowed for localhost during development).
+                  example: "https://api.yourapp.com/webhooks/cas-email"
+                allowed_sources:
+                  type: array
+                  items:
+                    type: string
+                    enum: [cdsl, nsdl, cams, kfintech]
+                  description: |
+                    Filter emails by CAS provider. If omitted, accepts all providers.
+                    - `cdsl` → eCAS@cdslstatement.com
+                    - `nsdl` → NSDL-CAS@nsdl.co.in
+                    - `cams` → donotreply@camsonline.com
+                    - `kfintech` → samfS@kfintech.com
+                  example: ["cdsl", "nsdl"]
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  maxProperties: 10
+                  description: |
+                    Optional key-value pairs (max 10) to include in webhook payload.
+                    Useful for passing context like plan_type, campaign_id, etc.
+                  example:
+                    plan: "premium"
+                    source: "onboarding"
+      responses:
+        '201':
+          description: Mailbox created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundEmail'
+        '400':
+          description: Invalid request (malformed URL, invalid sources, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+        - Inbound Email
+      summary: List Inbound Emails
+      description: |
+        List all mailboxes associated with your API key.
+        Returns active and inactive mailboxes (deleted mailboxes are excluded).
+      operationId: listInboundEmails
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, all]
+            default: all
+          description: Filter by status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of inbound emails to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of inbound emails
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  inbound_emails:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InboundEmail'
+                  total:
+                    type: integer
+                    description: Total number of inbound emails (for pagination)
+                    example: 15
+                  limit:
+                    type: integer
+                    example: 50
+                  offset:
+                    type: integer
+                    example: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v4/inbound-email/{inbound_email_id}:
+    get:
+      tags:
+        - Inbound Email
+      summary: Get Inbound Email Details
+      description: |
+        Retrieve details of a specific mailbox including statistics.
+      operationId: getInboundEmail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: inbound_email_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Inbound Email ID (e.g., ie_a1b2c3d4e5f6)
+          example: "ie_a1b2c3d4e5f6"
+      responses:
+        '200':
+          description: Mailbox details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundEmail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Mailbox not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Inbound Email
+      summary: Delete Inbound Email
+      description: |
+        Permanently delete an inbound email address. It will stop accepting emails.
+        
+        **Note:** Deletion is immediate and cannot be undone. Any emails received after
+        deletion will be rejected.
+      operationId: deleteInboundEmail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: inbound_email_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Inbound Email ID to delete
+      responses:
+        '200':
+          description: Mailbox deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Mailbox deleted successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Inbound email not found
 
 components:
   securitySchemes:
@@ -1944,6 +2196,11 @@ components:
           enum: [cdsl, nsdl, cams, kfintech]
           description: Detected CAS provider based on sender email
           example: "cdsl"
+        sender_email:
+          type: string
+          format: email
+          description: Email address of the CAS authority (CDSL, NSDL, CAMS, or KFintech) who originally sent this statement
+          example: "eCAS@cdslstatement.com"
         size:
           type: integer
           description: File size in bytes
@@ -2205,3 +2462,94 @@ components:
               type: number
               format: float
               description: Final net amount receivable or payable
+
+    # ============================================
+    # Inbound Email Schemas
+    # ============================================
+    InboundEmail:
+      type: object
+      description: An inbound email address for receiving forwarded CAS emails
+      properties:
+        inbound_email_id:
+          type: string
+          description: Unique inbound email identifier
+          example: "ie_a1b2c3d4e5f6"
+        email:
+          type: string
+          format: email
+          description: The inbound email address to forward CAS statements to
+          example: "ie_a1b2c3d4e5f6@import.casparser.in"
+        reference:
+          type: string
+          nullable: true
+          description: Your internal reference identifier
+          example: "user_12345"
+        callback_url:
+          type: string
+          format: uri
+          description: Webhook URL for email notifications
+          example: "https://api.yourapp.com/webhooks/cas-email"
+        allowed_sources:
+          type: array
+          items:
+            type: string
+            enum: [cdsl, nsdl, cams, kfintech]
+          description: Accepted CAS providers (empty = all)
+          example: ["cdsl", "nsdl"]
+        status:
+          type: string
+          enum: [active, paused]
+          description: Current mailbox status
+          example: "active"
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom key-value metadata
+          example:
+            plan: "premium"
+        created_at:
+          type: string
+          format: date-time
+          description: When the mailbox was created
+          example: "2025-02-21T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: When the mailbox was last updated
+          example: "2025-02-21T10:30:00Z"
+
+    InboundEmailWebhookPayload:
+      type: object
+      description: Webhook payload sent to your callback_url when an investor forwards a CAS email
+      properties:
+        inbound_email_id:
+          type: string
+          description: The inbound email address ID that received this email
+          example: "ie_a1b2c3d4e5f6"
+        forwarded_by:
+          type: string
+          format: email
+          description: Email address of the investor who forwarded the CAS email
+          example: "investor@gmail.com"
+        reference:
+          type: string
+          nullable: true
+          description: Your reference from inbound email creation
+          example: "user_12345"
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Your metadata from inbound email creation
+          example:
+            plan: "premium"
+        files:
+          type: array
+          description: CAS files from the email (matches EmailCASFile schema)
+          items:
+            $ref: '#/components/schemas/EmailCASFile'
+        count:
+          type: integer
+          description: Number of files
+          example: 1
