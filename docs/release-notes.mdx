@@ -10,6 +10,25 @@ description: Latest updates from CAS Parser
 
 ## 📅 February 2026
 
+### Inbound Email API
+
+Create dedicated email addresses for investors to forward CAS statements. No OAuth, no file upload — just forward and done.
+
+**How it works:**
+1. Create an inbound email: `POST /v4/inbound-email` with your `callback_url`
+2. We return a unique address like `<your-choice>@import.casparser.in`
+3. Investor forwards their CAS email to this address
+4. We validate the sender (CDSL/NSDL/CAMS/KFintech), extract attachments, and POST to your webhook
+
+**Webhook payload includes:**
+- `forwarded_by`: Investor's email address
+- `files`: Array of CAS attachments with download URLs (48h expiry)
+- `reference` and `metadata`: Your data from creation time
+
+**Billing:** 0.2 credits per successfully processed email.
+
+**Start here:** [Inbound Email Guide](/guides/inbound-email)
+
 ### Portfolio Links
 
 Branded portfolio collection pages for wealth managers and advisors. Share a custom link with clients — they upload CAS statements that are emailed directly to you.
@@ -32,6 +51,8 @@ Branded portfolio collection pages for wealth managers and advisors. Share a cus
 - Email delivery with PDF attachment
 
 ** Start here: [Portfolio Links](https://app.casparser.in/portfolio-links)
+
+---
 
 ### AI Agent Toolkit
 
