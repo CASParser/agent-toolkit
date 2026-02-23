@@ -27,7 +27,6 @@ sequenceDiagram
     User->>Email: Forwards CAS email
     Email->>API: Email received at ie_xyz@...
     API->>API: Validate sender (CDSL/NSDL/CAMS/KFintech)
-    API->>API: Upload attachments to R2
     API->>Webhook: POST with email details + attachment URLs
     Webhook-->>API: 200 OK
 ```
