@@ -95,6 +95,7 @@
               "guides/contract-notes",
               "guides/cas-generator",
               "guides/gmail-inbox",
+              "guides/inbound-email",
               "guides/cdsl-fetch",
               "guides/mcp-server"
             ]

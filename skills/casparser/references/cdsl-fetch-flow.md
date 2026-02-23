@@ -111,7 +111,7 @@ Content-Type: application/json
 
 ## Billing
 
-CDSL Fetch costs **1.5 credits** per successful verify step.
+CDSL Fetch costs **0.5 credits** per successful verify step.
 
 ## Related Templates
 

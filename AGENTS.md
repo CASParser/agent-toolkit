@@ -52,6 +52,25 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - Read-only access — the API cannot send emails.
 - User can revoke via `POST /v4/inbox/disconnect`.
 
+### Inbound Email (Email Forwarding)
+- Create dedicated email addresses for investors to forward CAS statements to.
+- **Use case:** Lower-friction alternative when OAuth or file upload isn't practical.
+- Flow:
+  1. `POST /v4/inbound-email` with `callback_url` → returns unique email like `ie_xxx@import.casparser.in`.
+  2. Investor forwards CAS email to this address.
+  3. We validate the sender against known CAS authorities, upload PDF attachments to cloud storage, and POST to your `callback_url`.
+- Only emails from verified CAS authorities are processed:
+  - CDSL: `eCAS@cdslstatement.com`
+  - NSDL: `NSDL-CAS@nsdl.co.in`
+  - CAMS: `donotreply@camsonline.com`
+  - KFintech: `samfS@kfintech.com`
+- Webhook payload includes `forwarded_by` (investor's email) at the top level, and `files` array uses the same `EmailCASFile` schema as Gmail Import.
+- `sender_email` in files is the CAS authority email (lowercase), `forwarded_by` is the investor who forwarded the email.
+- Presigned download URLs expire in 48 hours.
+- Optional `alias` field for friendly addresses (e.g., `john-portfolio@import.casparser.in`).
+- Manage with `GET /v4/inbound-email`, `GET /v4/inbound-email/{id}`, `DELETE /v4/inbound-email/{id}`.
+- **Billing:** 0.2 credits per successfully processed email.
+
 ### Portfolio Connect SDK (Recommended for Frontend)
 - **For web/frontend apps, start here.** The `@cas-parser/connect` npm package provides a drop-in modal widget.
 - The widget handles file upload, password entry, Gmail inbox import, and CDSL OTP fetch — all in a single UI.
@@ -84,7 +103,7 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 
 ### Credits & Billing
 - Each API call consumes credits. Check quota with `POST /v1/credits`.
-- Different features cost different credits (e.g., parsing = 1 credit, CDSL fetch = 1.5 credits).
+- Different features cost different credits (e.g., parsing = 1 credit, CDSL fetch = 0.5 credits).
 - Monitor usage with `POST /v1/usage` and `POST /v1/usage/summary`.
 
 ## Before Implementing
@@ -96,6 +115,7 @@ Always check [`skills/casparser/SKILL.md`](skills/casparser/SKILL.md) for existi
 - CDSL OTP fetch flow
 - KFintech mailback generation
 - Gmail inbox import
+- Inbound email (email forwarding)
 - Credits and usage monitoring
 
 ## MCP Server

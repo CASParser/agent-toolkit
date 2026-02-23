@@ -182,8 +182,17 @@ Are you building a frontend/web app?
 ├── Yes → Use Portfolio Connect SDK (Pattern 1) — recommended
 │         Handles file upload, password, Gmail import, CDSL fetch in one widget.
 │         npm install @cas-parser/connect
-└── No (backend/server-side) → Use the REST API directly (Pattern 2)
-          POST /v4/smart/parse with file upload or URL
+└── No (backend/server-side)
+    ├── User has the PDF → Smart Parse (Pattern 2)
+    │   POST /v4/smart/parse with file upload or URL
+    ├── User can authenticate via OTP → CDSL Fetch (Pattern 3)
+    │   2-step OTP flow, instant download
+    ├── User connects Gmail → Email Import (Pattern 4)
+    │   OAuth flow, search inbox for CAS files
+    ├── User forwards email → Inbound Email (Pattern 5)
+    │   Create email address, user forwards CAS, webhook delivers
+    └── Need fresh MF statement → KFintech Mailback (Pattern 6)
+        Triggers email to investor (async, not instant)
 ```
 
 ## Integration Patterns
@@ -266,19 +275,54 @@ For apps that want to automatically find CAS files in a user's Gmail inbox:
 
 See: [`templates/python-email-import.py`](templates/python-email-import.py), [`templates/nodejs-email-import.js`](templates/nodejs-email-import.js)
 
-### Pattern 5: KFintech Mailback
+### Pattern 5: Inbound Email (Email Forwarding)
+
+For apps that want users to forward CAS emails instead of uploading files or connecting Gmail:
+1. Create inbound email → 2. User forwards CAS → 3. Webhook delivers files
+
+```python
+import requests, os
+
+# Step 1: Create inbound email
+response = requests.post(
+    "https://api.casparser.in/v4/inbound-email",
+    headers={"x-api-key": os.environ["CASPARSER_API_KEY"]},
+    json={
+        "callback_url": "https://yourapp.com/webhooks/cas-email",
+        "allowed_sources": ["cdsl", "nsdl", "cams", "kfintech"],
+        "reference": "user_12345",
+    }
+)
+data = response.json()
+print(f"Forward CAS to: {data['email']}")
+# ie_a1b2c3d4e5f6@import.casparser.in
+
+# Step 2: Handle webhook (in your Flask/Express server)
+# POST to your callback_url with:
+# {
+#   "inbound_email_id": "ie_a1b2c3d4e5f6",
+#   "forwarded_by": "investor@gmail.com",  # Investor's email
+#   "reference": "user_12345",
+#   "files": [{ "message_id": "att_xyz", "filename": "cdsl_20250222_att_xyz.pdf",
+#               "cas_type": "cdsl", "sender_email": "ecas@cdslstatement.com",  # CAS authority
+#               "url": "https://...", "expires_in": 172800 }],
+#   "count": 1
+# }
+```
+
+### Pattern 6: KFintech Mailback
 
 Trigger a CAS to be emailed to the investor. Good for getting fresh mutual fund statements:
 
 See: [`templates/python-kfintech-generate.py`](templates/python-kfintech-generate.py)
 
-### Pattern 6: Contract Note Parsing
+### Pattern 7: Contract Note Parsing
 
 Parse broker contract notes for trade details and charges:
 
 See: [`templates/python-contract-note.py`](templates/python-contract-note.py)
 
-### Pattern 7: Credits & Usage Monitoring
+### Pattern 8: Credits & Usage Monitoring
 
 Check remaining quota and track API usage:
 
