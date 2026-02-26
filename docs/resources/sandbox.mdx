@@ -44,40 +44,76 @@ The sandbox returns realistic sample data:
 
 ```json
 {
-  "status": "success",
-  "cas_type": "cdsl",
+  "meta": {
+    "cas_type": "CDSL",
+    "statement_period": {
+      "from": "2024-01-01",
+      "to": "2024-01-31"
+    },
+    "generated_at": "2024-02-01T10:30:00Z"
+  },
   "investor": {
     "name": "John Doe",
-    "email": "john.doe@example.com",
     "pan": "ABCDE1234F",
-    "mobile": "9876543210"
+    "email": "john.doe@example.com",
+    "mobile": "9876543210",
+    "address": "123 Main St, Mumbai",
+    "pincode": "400001",
+    "cas_id": "CAS123456"
   },
   "summary": {
     "total_value": 2547832.50,
-    "as_on_date": "2024-01-15",
     "accounts": {
-      "demat_accounts": 2,
-      "mutual_fund_folios": 5,
-      "insurance_policies": 1,
-      "nps_accounts": 1
+      "demat": {
+        "count": 2,
+        "total_value": 1500000.00
+      },
+      "mutual_funds": {
+        "count": 5,
+        "total_value": 950000.00
+      },
+      "insurance": {
+        "count": 1,
+        "total_value": 50000.00
+      },
+      "nps": {
+        "count": 1,
+        "total_value": 47832.50
+      }
     }
   },
   "demat_accounts": [
     {
+      "demat_type": "CDSL",
       "dp_id": "12345678",
       "dp_name": "HDFC Bank Limited",
       "client_id": "1234567890123456",
-      "total_value": 1500000.00,
-      "equities": [
+      "bo_id": "1234567890123456",
+      "value": 1500000.00,
+      "linked_holders": [
         {
-          "isin": "INE002A01018",
-          "name": "Reliance Industries Ltd",
-          "units": 100,
-          "value": 250000.00
+          "name": "John Doe",
+          "pan": "ABCDE1234F"
         }
-      ]
+      ],
+      "holdings": {
+        "equities": [
+          {
+            "isin": "INE002A01018",
+            "name": "Reliance Industries Ltd",
+            "units": 100.0,
+            "value": 250000.00
+          }
+        ]
+      },
+      "additional_info": {}
     }
-  ]
+  ],
+  "mutual_funds": [],
+  "insurance": {
+    "life_insurance_policies": []
+  },
+  "nps": []
 }
 ```
 

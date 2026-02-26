@@ -42,25 +42,32 @@ print(f"Total Value: ₹{data['summary']['total_value']:,.0f}")
 
 ```json
 {
-  "status": "success",
+  "meta": {
+    "cas_type": "CDSL",
+    "statement_period": {
+      "from": "2024-01-01",
+      "to": "2024-01-31"
+    },
+    "generated_at": "2024-02-01T10:30:00Z"
+  },
   "investor": {
     "name": "John Doe",
-    "email": "john@example.com",
     "pan": "ABCDE1234F",
+    "email": "john@example.com",
     "mobile": "9876543210"
   },
   "summary": {
     "total_value": 1234567.89,
     "accounts": {
-      "demat_accounts": 2,
-      "mutual_fund_folios": 5,
-      "insurance_policies": 1,
-      "nps_accounts": 1
+      "demat": { "count": 2, "total_value": 800000.00 },
+      "mutual_funds": { "count": 5, "total_value": 400000.00 },
+      "insurance": { "count": 1, "total_value": 25000.00 },
+      "nps": { "count": 1, "total_value": 9567.89 }
     }
   },
   "demat_accounts": [...],
   "mutual_funds": [...],
-  "insurance": [...],
+  "insurance": {...},
   "nps": [...]
 }
 ```
@@ -102,10 +109,10 @@ if __name__ == "__main__":
     print(f"PAN: {data['investor']['pan']}")
     print(f"Total Value: ₹{data['summary']['total_value']:,.2f}")
     
-    # Print holdings
+    # Print demat holdings
     for account in data.get("demat_accounts", []):
-        print(f"\nDemat Account: {account['dp_id']}")
-        for equity in account.get("equities", []):
+        print(f"\nDemat Account: {account['dp_name']} ({account['demat_type']})")
+        for equity in account.get("holdings", {}).get("equities", []):
             print(f"  {equity['name']}: {equity['units']} units @ ₹{equity['value']:,.2f}")
 ```
 

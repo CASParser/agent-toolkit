@@ -92,44 +92,77 @@ All CAS types return a unified JSON structure:
 
 ```json
 {
-  "status": "success",
-  "cas_type": "cdsl",
+  "meta": {
+    "cas_type": "CDSL",
+    "statement_period": {
+      "from": "2024-01-01",
+      "to": "2024-01-31"
+    },
+    "generated_at": "2024-02-01T10:30:00Z"
+  },
   "investor": {
     "name": "John Doe",
-    "email": "john@example.com",
     "pan": "ABCDE1234F",
-    "mobile": "9876543210"
+    "email": "john@example.com",
+    "mobile": "9876543210",
+    "address": "123 Main St, Mumbai",
+    "pincode": "400001",
+    "cas_id": "CAS123456"
   },
   "summary": {
     "total_value": 2500000.00,
-    "as_on_date": "2024-01-15",
     "accounts": {
-      "demat_accounts": 2,
-      "mutual_fund_folios": 5,
-      "insurance_policies": 1,
-      "nps_accounts": 1
+      "demat": {
+        "count": 2,
+        "total_value": 1500000.00
+      },
+      "mutual_funds": {
+        "count": 5,
+        "total_value": 900000.00
+      },
+      "insurance": {
+        "count": 1,
+        "total_value": 50000.00
+      },
+      "nps": {
+        "count": 1,
+        "total_value": 50000.00
+      }
     }
   },
   "demat_accounts": [
     {
+      "demat_type": "CDSL",
       "dp_id": "12345678",
       "dp_name": "HDFC Bank",
       "client_id": "12345678901234",
-      "total_value": 1500000.00,
-      "equities": [...],
-      "corporate_bonds": [...],
-      "mutual_funds": [...],
-      "aifs": [...]
+      "bo_id": "12345678901234",
+      "value": 1500000.00,
+      "linked_holders": [...],
+      "holdings": {
+        "equities": [...],
+        "corporate_bonds": [...],
+        "government_securities": [...],
+        "aifs": [...],
+        "demat_mutual_funds": [...]
+      },
+      "additional_info": {...}
     }
   ],
   "mutual_funds": [
     {
-      "folio": "1234567890",
+      "folio_number": "1234567890",
       "amc": "HDFC Mutual Fund",
-      "schemes": [...]
+      "registrar": "CAMS",
+      "value": 450000.00,
+      "linked_holders": [...],
+      "schemes": [...],
+      "additional_info": {...}
     }
   ],
-  "insurance": [...],
+  "insurance": {
+    "life_insurance_policies": [...]
+  },
   "nps": [...]
 }
 ```

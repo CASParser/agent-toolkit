@@ -80,20 +80,33 @@ Access tokens (`at_` prefix) can replace API keys on all `/v4/*` endpoints.
 
 ## Response Format
 
+All parsing endpoints return a unified JSON structure:
+
 ```json
 {
-  "status": "success",
-  "cas_type": "cdsl",
+  "meta": {
+    "cas_type": "CDSL",
+    "statement_period": {
+      "from": "2024-01-01",
+      "to": "2024-01-31"
+    },
+    "generated_at": "2024-02-01T10:30:00Z"
+  },
   "investor": {
     "name": "John Doe",
     "pan": "ABCDE1234F"
   },
   "summary": {
     "total_value": 2500000.00,
-    "as_on_date": "2024-01-15"
+    "accounts": {
+      "demat": { "count": 2, "total_value": 1500000.00 },
+      "mutual_funds": { "count": 5, "total_value": 1000000.00 }
+    }
   },
   "demat_accounts": [...],
-  "mutual_funds": [...]
+  "mutual_funds": [...],
+  "insurance": {...},
+  "nps": [...]
 }
 ```
 

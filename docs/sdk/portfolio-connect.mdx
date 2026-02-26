@@ -129,22 +129,42 @@ Access tokens:
 
 ## Response Data
 
-See full schema: [API Reference](/api-reference/introduction)
+See full schema: [Response Schema](/learn/response-schema)
 
 ```typescript
 interface ParsedData {
-  cas_type: 'CAMS_KFINTECH' | 'CDSL' | 'NSDL';
-  status: 'success' | 'failed';
-  investor_info?: {
+  meta: {
+    cas_type: 'CAMS_KFINTECH' | 'CDSL' | 'NSDL';
+    statement_period: {
+      from: string;  // YYYY-MM-DD
+      to: string;    // YYYY-MM-DD
+    };
+    generated_at: string;  // ISO 8601
+  };
+  investor: {
     name: string;
+    pan: string;
     email?: string;
-    pan?: string;
+    mobile?: string;
+    address?: string;
+    pincode?: string;
+    cas_id?: string;
   };
-  summary?: {
+  summary: {
     total_value: number;
-    as_on_date: string;
+    accounts: {
+      demat: { count: number; total_value: number };
+      mutual_funds: { count: number; total_value: number };
+      insurance: { count: number; total_value: number };
+      nps: { count: number; total_value: number };
+    };
   };
-  // ... folios, holdings, etc.
+  demat_accounts: Array<DematAccount>;
+  mutual_funds: Array<MutualFundFolio>;
+  insurance: {
+    life_insurance_policies: Array<LifeInsurancePolicy>;
+  };
+  nps: Array<NPSAccount>;
 }
 ```
 

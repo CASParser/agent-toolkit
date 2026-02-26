@@ -35,18 +35,20 @@ import requests
 response = requests.post(
     "https://api.casparser.in/v4/contract_note/parse",
     headers={"x-api-key": "YOUR_API_KEY"},
-    files={"file": open("contract_note.pdf", "rb")},
+    files={"pdf_file": open("contract_note.pdf", "rb")},
     data={"password": "ABCDE1234F"}
 )
 
-data = response.json()
-for trade in data.get("trades", []):
-    print(f"{trade['symbol']}: {trade['quantity']} @ ₹{trade['price']}")
+result = response.json()
+if result["status"] == "success":
+    data = result["data"]
+    for txn in data["equity_transactions"]:
+        print(f"{txn['security_symbol']}: {txn['buy_quantity']} @ ₹{txn['buy_wap']}")
 ```
 
 ```javascript Node.js
 const form = new FormData();
-form.append('file', fs.createReadStream('contract_note.pdf'));
+form.append('pdf_file', fs.createReadStream('contract_note.pdf'));
 form.append('password', 'ABCDE1234F');
 
 const response = await fetch('https://api.casparser.in/v4/contract_note/parse', {
@@ -55,13 +57,14 @@ const response = await fetch('https://api.casparser.in/v4/contract_note/parse', 
   body: form
 });
 
-const data = await response.json();
+const result = await response.json();
+const data = result.data;
 ```
 
 ```bash cURL
 curl -X POST https://api.casparser.in/v4/contract_note/parse \
   -H "x-api-key: YOUR_API_KEY" \
-  -F "file=@contract_note.pdf" \
+  -F "pdf_file=@contract_note.pdf" \
   -F "password=ABCDE1234F"
 ```
 </CodeGroup>
@@ -71,54 +74,119 @@ curl -X POST https://api.casparser.in/v4/contract_note/parse \
 ```json
 {
   "status": "success",
-  "broker": "zerodha",
-  "trade_date": "2024-01-15",
-  "client": {
-    "name": "John Doe",
-    "client_id": "AB1234",
-    "pan": "ABCDE1234F"
-  },
-  "trades": [
-    {
-      "symbol": "RELIANCE",
-      "isin": "INE002A01018",
-      "exchange": "NSE",
-      "segment": "EQ",
-      "trade_type": "BUY",
-      "quantity": 10,
-      "price": 2450.50,
-      "trade_value": 24505.00,
-      "brokerage": 12.25,
-      "stt": 24.51,
-      "other_charges": 5.67,
-      "net_value": 24547.43
+  "msg": "success",
+  "data": {
+    "contract_note_info": {
+      "contract_note_number": "CNT-25/26-73436720",
+      "trade_date": "2025-08-05",
+      "settlement_number": "2025149",
+      "settlement_date": "2025-08-06"
+    },
+    "broker_info": {
+      "broker_type": "zerodha",
+      "name": "Zerodha Broking Limited",
+      "sebi_registration": "INZ000031633"
+    },
+    "client_info": {
+      "name": "JOHN DOE",
+      "pan": "ABCDE1234F",
+      "ucc": "AB1234",
+      "place_of_supply": "DELHI",
+      "gst_state_code": "7"
+    },
+    "equity_transactions": [
+      {
+        "isin": "INE002A01018",
+        "security_name": "RELIANCE",
+        "security_symbol": "RELIANCE",
+        "buy_quantity": 10,
+        "buy_wap": 2450.50,
+        "buy_total_value": 24505.00,
+        "sell_quantity": 0,
+        "sell_wap": 0,
+        "sell_total_value": 0,
+        "net_obligation": 24547.43
+      }
+    ],
+    "derivatives_transactions": [],
+    "detailed_trades": [
+      {
+        "order_number": "1000000042939390",
+        "order_time": "13:13:13",
+        "trade_number": "4006567",
+        "trade_time": "13:13:13",
+        "security_description": "RELIANCE-EQ/INE002A01018",
+        "buy_sell": "B",
+        "exchange": "NSE",
+        "quantity": 10,
+        "brokerage": 12.25,
+        "net_rate_per_unit": 2450.50,
+        "closing_rate_per_unit": 2450.50,
+        "net_total": 24547.43
+      }
+    ],
+    "charges_summary": {
+      "pay_in_pay_out_obligation": 24505.00,
+      "taxable_value_brokerage": 12.25,
+      "exchange_transaction_charges": 5.00,
+      "cgst": 1.10,
+      "sgst": 1.10,
+      "igst": 0,
+      "securities_transaction_tax": 24.51,
+      "sebi_turnover_fees": 0.25,
+      "stamp_duty": 2.45,
+      "net_amount_receivable_payable": 24547.43
     }
-  ],
-  "summary": {
-    "total_buy_value": 24505.00,
-    "total_sell_value": 0,
-    "total_charges": 42.43,
-    "net_obligation": 24547.43
   }
 }
 ```
 
-## Trade fields
+## Response Fields
 
+### Contract Note Info
 | Field | Description |
 |-------|-------------|
-| `symbol` | Trading symbol (e.g., RELIANCE) |
-| `isin` | ISIN code |
-| `exchange` | NSE, BSE |
-| `segment` | EQ (equity), FO (F&O), etc. |
-| `trade_type` | BUY or SELL |
-| `quantity` | Number of shares |
-| `price` | Per-share price |
-| `trade_value` | quantity × price |
-| `brokerage` | Broker fee |
-| `stt` | Securities Transaction Tax |
-| `other_charges` | Exchange fees, GST, etc. |
-| `net_value` | Final settlement amount |
+| `contract_note_number` | Contract note reference number |
+| `trade_date` | Date when trades were executed |
+| `settlement_number` | Settlement reference |
+| `settlement_date` | Settlement date |
+
+### Equity Transactions (Summary)
+| Field | Description |
+|-------|-------------|
+| `isin` | ISIN code of the security |
+| `security_name` | Name of the security |
+| `security_symbol` | Trading symbol |
+| `buy_quantity` | Total quantity purchased |
+| `buy_wap` | Weighted Average Price for buys |
+| `buy_total_value` | Total buy value |
+| `sell_quantity` | Total quantity sold |
+| `sell_wap` | Weighted Average Price for sells |
+| `sell_total_value` | Total sell value |
+| `net_obligation` | Net amount payable/receivable |
+
+### Detailed Trades
+| Field | Description |
+|-------|-------------|
+| `order_number` | Order reference number |
+| `trade_number` | Trade reference number |
+| `security_description` | Security with exchange and ISIN |
+| `buy_sell` | B (Buy) or S (Sell) |
+| `exchange` | NSE, BSE, etc. |
+| `quantity` | Quantity traded |
+| `brokerage` | Brokerage for this trade |
+| `net_rate_per_unit` | Net rate per unit |
+| `net_total` | Net total for this trade |
+
+### Charges Summary
+| Field | Description |
+|-------|-------------|
+| `pay_in_pay_out_obligation` | Net pay-in/pay-out |
+| `taxable_value_brokerage` | Taxable brokerage amount |
+| `securities_transaction_tax` | STT amount |
+| `stamp_duty` | Stamp duty charges |
+| `cgst` / `sgst` / `igst` | GST components |
+| `net_amount_receivable_payable` | Final settlement amount |
 
 ## Credit usage
 
