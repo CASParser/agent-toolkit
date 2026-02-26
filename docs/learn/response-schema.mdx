@@ -11,77 +11,94 @@ All CAS parsing endpoints return a unified JSON structure regardless of source (
 
 ```json
 {
-  "status": "success",
-  "cas_type": "cdsl",
   "meta": { ... },
   "investor": { ... },
   "summary": { ... },
   "demat_accounts": [ ... ],
   "mutual_funds": [ ... ],
-  "insurance": [ ... ],
+  "insurance": { ... },
   "nps": [ ... ]
 }
 ```
 
-## Status Field
-
-| Value | Description |
-|-------|-------------|
-| `success` | Parsing completed successfully |
-| `failed` | Parsing failed (see `msg` field) |
-
 ## Meta Object
+
+Contains metadata about the CAS document and parsing operation.
 
 ```json
 {
   "meta": {
-    "cas_type": "cdsl",
-    "statement_date": "2024-01-31",
-    "generated_on": "2024-02-01T10:30:00Z"
+    "cas_type": "CDSL",
+    "statement_period": {
+      "from": "2024-01-01",
+      "to": "2024-01-31"
+    },
+    "generated_at": "2024-02-01T10:30:00Z"
   }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `cas_type` | string | `cdsl`, `nsdl`, or `cams_kfintech` |
-| `statement_date` | string | Date of the statement (YYYY-MM-DD) |
-| `generated_on` | string | When the CAS was generated (ISO 8601) |
+| `cas_type` | string | `CDSL`, `NSDL`, or `CAMS_KFINTECH` (uppercase) |
+| `statement_period` | object | Period covered by the statement |
+| `statement_period.from` | string | Start date of statement (YYYY-MM-DD) |
+| `statement_period.to` | string | End date of statement (YYYY-MM-DD) |
+| `generated_at` | string | When the response was generated (ISO 8601) |
 
 ## Investor Object
+
+Contains personal details of the investor extracted from the CAS.
 
 ```json
 {
   "investor": {
     "name": "John Doe",
-    "email": "john@example.com",
     "pan": "ABCDE1234F",
+    "email": "john@example.com",
+    "address": "123 Main St, Mumbai 400001",
+    "pincode": "400001",
     "mobile": "9876543210",
-    "address": "123 Main St, Mumbai 400001"
+    "cas_id": "CAS123456"
   }
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Full name |
-| `email` | string | No | Email address |
-| `pan` | string | Yes | PAN number |
-| `mobile` | string | No | Mobile number |
-| `address` | string | No | Full address |
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Full name of investor |
+| `pan` | string | PAN (Permanent Account Number) |
+| `email` | string | Email address (may be null) |
+| `address` | string | Full postal address (may be null) |
+| `pincode` | string | Postal/ZIP code (may be null) |
+| `mobile` | string | Mobile number (may be null) |
+| `cas_id` | string | CAS ID (only for NSDL and CDSL, may be null) |
 
 ## Summary Object
+
+Provides aggregated portfolio metrics and account counts.
 
 ```json
 {
   "summary": {
     "total_value": 2547832.50,
-    "as_on_date": "2024-01-15",
     "accounts": {
-      "demat_accounts": 2,
-      "mutual_fund_folios": 5,
-      "insurance_policies": 1,
-      "nps_accounts": 1
+      "demat": {
+        "count": 2,
+        "total_value": 1500000.00
+      },
+      "mutual_funds": {
+        "count": 5,
+        "total_value": 950000.00
+      },
+      "insurance": {
+        "count": 1,
+        "total_value": 50000.00
+      },
+      "nps": {
+        "count": 1,
+        "total_value": 47832.50
+      }
     }
   }
 }
@@ -89,26 +106,52 @@ All CAS parsing endpoints return a unified JSON structure regardless of source (
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `total_value` | number | Total portfolio value in ₹ |
-| `as_on_date` | string | Valuation date (YYYY-MM-DD) |
-| `accounts` | object | Count of each account type |
+| `total_value` | number | Total portfolio value across all accounts |
+| `accounts` | object | Breakdown by account type |
+| `accounts.demat.count` | integer | Number of demat accounts |
+| `accounts.demat.total_value` | number | Total value of demat holdings |
+| `accounts.mutual_funds.count` | integer | Number of mutual fund folios |
+| `accounts.mutual_funds.total_value` | number | Total value of MF holdings |
+| `accounts.insurance.count` | integer | Number of insurance policies |
+| `accounts.insurance.total_value` | number | Total value of insurance |
+| `accounts.nps.count` | integer | Number of NPS accounts |
+| `accounts.nps.total_value` | number | Total value of NPS holdings |
 
 ## Demat Accounts Array
+
+Array of demat (dematerialized) accounts holding equities, bonds, ETFs, and other securities.
 
 ```json
 {
   "demat_accounts": [
     {
+      "demat_type": "CDSL",
       "dp_id": "12345678",
       "dp_name": "HDFC Bank Limited",
       "client_id": "1234567890123456",
-      "total_value": 1500000.00,
-      "equities": [ ... ],
-      "corporate_bonds": [ ... ],
-      "mutual_funds": [ ... ],
-      "aifs": [ ... ],
-      "etfs": [ ... ],
-      "g_secs": [ ... ]
+      "bo_id": "1234567890123456",
+      "value": 1500000.00,
+      "linked_holders": [
+        {
+          "name": "John Doe",
+          "pan": "ABCDE1234F"
+        }
+      ],
+      "holdings": {
+        "equities": [ ... ],
+        "corporate_bonds": [ ... ],
+        "government_securities": [ ... ],
+        "aifs": [ ... ],
+        "demat_mutual_funds": [ ... ]
+      },
+      "additional_info": {
+        "bo_status": "Active",
+        "bo_type": "Individual",
+        "bsda": "No",
+        "email": "john@example.com",
+        "status": "Active",
+        "nominee": "Jane Doe"
+      }
     }
   ]
 }
@@ -118,191 +161,318 @@ All CAS parsing endpoints return a unified JSON structure regardless of source (
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `dp_id` | string | Depository Participant ID (8 digits) |
+| `demat_type` | string | `NSDL` or `CDSL` |
+| `dp_id` | string | Depository Participant ID |
 | `dp_name` | string | DP name (e.g., "HDFC Bank") |
-| `client_id` | string | Client ID (16 digits) |
-| `total_value` | number | Total value of this account |
+| `client_id` | string | Client ID |
+| `bo_id` | string | Beneficiary Owner ID (primarily for CDSL) |
+| `value` | number | Total value of this demat account |
+| `linked_holders` | array | Account holders linked to this account |
+| `holdings` | object | Holdings grouped by asset class |
+| `additional_info` | object | Account-specific metadata (varies by type) |
 
 ### Equity Object
+
+Holdings in equities (stocks).
 
 ```json
 {
   "isin": "INE002A01018",
   "name": "Reliance Industries Ltd",
-  "units": 100,
-  "current_value": 250000.00,
-  "market_price": 2500.00,
+  "units": 100.0,
+  "value": 250000.00,
   "transactions": [
     {
       "date": "2023-06-15",
-      "type": "BUY",
-      "quantity": 50,
-      "price": 2400.00,
-      "value": 120000.00
+      "type": "PURCHASE",
+      "description": "Purchase",
+      "units": 50.0,
+      "nav": 2400.00,
+      "amount": 120000.00,
+      "balance": 100.0
     }
-  ]
+  ],
+  "additional_info": {
+    "open_units": 50.0,
+    "close_units": 100.0
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `isin` | string | ISIN code (12 chars) |
+| `isin` | string | ISIN code (12 characters) |
 | `name` | string | Security name |
-| `units` | number | Number of shares held |
-| `current_value` | number | Current market value |
-| `market_price` | number | Price per share |
-| `transactions` | array | Transaction history (optional) |
+| `units` | number | Number of shares currently held |
+| `value` | number | Current market value |
+| `transactions` | array | Transaction history (beta feature) |
+| `additional_info` | object | Opening/closing units for statement period |
 
 ### Corporate Bond Object
+
+Holdings in corporate bonds.
 
 ```json
 {
   "isin": "INE123A01234",
-  "company_name": "HDFC Ltd",
-  "number_of_bonds": 10,
-  "coupon_rate": "8.5%",
-  "maturity_date": "2027-12-31",
-  "face_value": 1000,
-  "market_value": 1050,
-  "value": 10500
+  "name": "HDFC Ltd 8.5% Bond",
+  "units": 10.0,
+  "value": 10500.00,
+  "transactions": [ ... ],
+  "additional_info": {
+    "open_units": 10.0,
+    "close_units": 10.0
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `isin` | string | ISIN code |
-| `company_name` | string | Issuer name |
-| `number_of_bonds` | number | Quantity held |
-| `coupon_rate` | string | Interest rate |
-| `maturity_date` | string | Maturity date (YYYY-MM-DD) |
-| `face_value` | number | Face value per bond |
-| `market_value` | number | Market value per bond |
-| `value` | number | Total value |
+| `name` | string | Bond name/description |
+| `units` | number | Number of units held |
+| `value` | number | Current market value |
+| `transactions` | array | Transaction history (beta feature) |
+| `additional_info` | object | Opening/closing units for statement period |
 
 ## Mutual Funds Array
+
+Array of mutual fund folios with schemes and transactions.
 
 ```json
 {
   "mutual_funds": [
     {
-      "folio": "1234567890",
+      "folio_number": "1234567890",
       "amc": "HDFC Mutual Fund",
-      "pan": "ABCDE1234F",
+      "registrar": "Computer Age Management Services",
+      "value": 451000.88,
+      "linked_holders": [
+        {
+          "name": "John Doe",
+          "pan": "ABCDE1234F"
+        }
+      ],
       "schemes": [
         {
-          "scheme": "HDFC Equity Fund - Growth",
           "isin": "INF179K01234",
+          "name": "HDFC Equity Fund - Growth",
+          "type": "Equity",
           "units": 1000.50,
           "nav": 450.75,
           "value": 451000.88,
-          "transactions": [ ... ]
+          "cost": 400000.00,
+          "gain": {
+            "absolute": 51000.88,
+            "percentage": 12.75
+          },
+          "transactions": [ ... ],
+          "nominees": ["Jane Doe"],
+          "additional_info": {
+            "advisor": "XYZ Advisors",
+            "rta_code": "HDC001",
+            "amfi": "100123",
+            "open_units": 900.50,
+            "close_units": 1000.50
+          }
         }
-      ]
+      ],
+      "additional_info": {
+        "pan": "ABCDE1234F",
+        "pankyc": "OK",
+        "kyc": "OK"
+      }
     }
   ]
 }
 ```
 
-### Mutual Fund Fields
+### Mutual Fund Folio Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `folio` | string | Folio number |
-| `amc` | string | Asset Management Company |
-| `pan` | string | Investor PAN |
+| `folio_number` | string | Folio number |
+| `amc` | string | Asset Management Company name |
+| `registrar` | string | Registrar and Transfer Agent name |
+| `value` | number | Total value of the folio |
+| `linked_holders` | array | Account holders linked to this folio |
 | `schemes` | array | List of schemes in this folio |
+| `additional_info` | object | PAN, KYC status, etc. |
 
 ### Scheme Object
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `scheme` | string | Scheme name |
 | `isin` | string | ISIN code |
+| `name` | string | Scheme name |
+| `type` | string | `Equity`, `Debt`, `Hybrid`, or `Other` |
 | `units` | number | Units held |
-| `nav` | number | Net Asset Value |
+| `nav` | number | Net Asset Value per unit |
 | `value` | number | Current value (units × NAV) |
+| `cost` | number | Cost of investment |
+| `gain` | object | Gain/loss metrics |
+| `gain.absolute` | number | Absolute gain or loss |
+| `gain.percentage` | number | Percentage gain or loss |
 | `transactions` | array | Transaction history |
+| `nominees` | array | List of nominee names |
+| `additional_info` | object | Advisor, RTA code, AMFI code, opening/closing units |
 
 ### Transaction Object
+
+Unified transaction schema for all holdings (mutual funds, equities, bonds, etc.).
 
 ```json
 {
   "date": "2023-06-15",
+  "description": "Purchase",
   "type": "PURCHASE",
   "amount": 10000.00,
   "units": 22.18,
   "nav": 450.86,
-  "balance": 1000.50
+  "balance": 1000.50,
+  "dividend_rate": null,
+  "additional_info": {
+    "stamp_duty": 5.00,
+    "order_no": "ORD123456"
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `date` | string | Transaction date (YYYY-MM-DD) |
-| `type` | string | `PURCHASE`, `REDEMPTION`, `DIVIDEND`, etc. |
-| `amount` | number | Transaction amount |
-| `units` | number | Units transacted |
-| `nav` | number | NAV at transaction |
-| `balance` | number | Units balance after transaction |
+| `description` | string | Transaction description/particulars |
+| `type` | string | Transaction type (see below) |
+| `amount` | number | Transaction amount in currency (may be null) |
+| `units` | number | Number of units involved |
+| `nav` | number | NAV/price per unit on transaction date (may be null) |
+| `balance` | number | Balance units after transaction |
+| `dividend_rate` | number | Dividend rate (for DIVIDEND_PAYOUT, may be null) |
+| `additional_info` | object | Additional transaction-specific fields |
 
-## Insurance Array
+**Transaction Types:**
+`PURCHASE`, `PURCHASE_SIP`, `REDEMPTION`, `SWITCH_IN`, `SWITCH_IN_MERGER`, `SWITCH_OUT`, `SWITCH_OUT_MERGER`, `DIVIDEND_PAYOUT`, `DIVIDEND_REINVEST`, `SEGREGATION`, `STAMP_DUTY_TAX`, `TDS_TAX`, `STT_TAX`, `MISC`, `REVERSAL`, `UNKNOWN`
+
+## Insurance Object
+
+Contains insurance policies (currently only life insurance).
 
 ```json
 {
-  "insurance": [
-    {
-      "policy_number": "POL123456",
-      "provider": "HDFC Life",
-      "plan": "Term Insurance",
-      "sum_assured": 10000000,
-      "premium": 15000,
-      "maturity_date": "2045-12-31"
-    }
-  ]
+  "insurance": {
+    "life_insurance_policies": [
+      {
+        "policy_number": "POL123456",
+        "provider": "HDFC Life",
+        "policy_name": "Click 2 Protect Life",
+        "life_assured": "John Doe",
+        "status": "Active",
+        "sum_assured": 10000000,
+        "premium_amount": 15000,
+        "premium_frequency": "Annual",
+        "additional_info": { }
+      }
+    ]
+  }
 }
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `policy_number` | string | Insurance policy number |
+| `provider` | string | Insurance company name |
+| `policy_name` | string | Name of the insurance policy |
+| `life_assured` | string | Name of the life assured |
+| `status` | string | Policy status (e.g., Active, Lapsed) |
+| `sum_assured` | number | Sum assured amount |
+| `premium_amount` | number | Premium amount |
+| `premium_frequency` | string | Frequency (Annual, Monthly, etc.) |
+| `additional_info` | object | Additional policy-specific information |
+
 ## NPS Array
+
+National Pension System accounts (only available in NSDL CAS).
 
 ```json
 {
   "nps": [
     {
       "pran": "123456789012",
-      "tier": "Tier I",
-      "fund_type": "Equity",
-      "units": 5000.50,
-      "nav": 45.67,
-      "value": 228472.84
+      "cra": "NSDL",
+      "value": 228472.84,
+      "funds": [
+        {
+          "name": "SBI Equity Fund",
+          "units": 5000.50,
+          "nav": 45.67,
+          "value": 228472.84,
+          "cost": 200000.00,
+          "additional_info": {
+            "tier": 1,
+            "manager": "SBI Pension Funds"
+          }
+        }
+      ],
+      "linked_holders": [
+        {
+          "name": "John Doe",
+          "pan": "ABCDE1234F"
+        }
+      ],
+      "additional_info": { }
     }
   ]
 }
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `pran` | string | Permanent Retirement Account Number |
+| `cra` | string | Central Record Keeping Agency name |
+| `value` | number | Total value of the NPS account |
+| `funds` | array | List of NPS funds |
+| `linked_holders` | array | Account holders linked to this NPS account |
+| `additional_info` | object | Additional NPS account metadata |
+
+### NPS Fund Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Name of the NPS fund |
+| `units` | number | Number of units held |
+| `nav` | number | Net Asset Value per unit |
+| `value` | number | Current market value |
+| `cost` | number | Cost of investment |
+| `additional_info.tier` | number | NPS tier (1, 2, or null) |
+| `additional_info.manager` | string | Fund manager name |
+
 ## Error Response
+
+When parsing fails, the API returns a `failed` status with a descriptive error message.
 
 ```json
 {
   "status": "failed",
-  "msg": "Invalid password for PDF",
-  "code": "INVALID_PASSWORD"
+  "msg": "Invalid password for PDF"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `status` | string | Always `failed` for errors |
+| `status` | string | Always `failed` for errors (or `error` for system errors) |
 | `msg` | string | Human-readable error message |
-| `code` | string | Error code for programmatic handling |
 
-## Common Error Codes
+**Note:** All responses include an `X-Request-ID` header (format: `req_<alphanumeric>`) for debugging and support.
 
-| Code | Description | Solution |
-|------|-------------|----------|
-| `INVALID_PASSWORD` | Wrong PDF password | Check PAN format |
-| `INVALID_PDF` | Corrupted/scanned PDF | Use original digital PDF |
-| `UNSUPPORTED_FORMAT` | Not a CAS file | Upload CAS, not bank statement |
-| `PARSING_ERROR` | Internal parsing failure | Contact support with request ID |
+## Common Error Messages
+
+| Message | Cause | Solution |
+|---------|-------|----------|
+| `Invalid password for PDF` | Wrong PDF password | Verify password format (often PAN-based) |
+| `Invalid PDF file` | Corrupted or scanned PDF | Use original digitally-generated PDF |
+| `Unsupported CAS type` | Wrong endpoint for CAS type | Use `/v4/smart/parse` to auto-detect |
+| `API quota exceeded` | Credit limit reached | Upgrade plan or wait for reset |
+| `Authentication failed` | Missing/invalid API key | Check `x-api-key` header |
 
 ## Next Steps
 

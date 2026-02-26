@@ -63,35 +63,56 @@ console.log(response.data);
 
 ```typescript
 interface CASResponse {
-  status: 'success' | 'failed';
-  msg?: string;
+  meta: {
+    cas_type: 'CDSL' | 'NSDL' | 'CAMS_KFINTECH';
+    statement_period: {
+      from: string;  // YYYY-MM-DD
+      to: string;    // YYYY-MM-DD
+    };
+    generated_at: string;  // ISO 8601
+  };
   investor: {
     name: string;
-    email: string;
     pan: string;
-    mobile: string;
+    email?: string;
+    mobile?: string;
+    address?: string;
+    pincode?: string;
+    cas_id?: string;
   };
   summary: {
     total_value: number;
     accounts: {
-      demat_accounts: number;
-      mutual_fund_folios: number;
-      insurance_policies: number;
-      nps_accounts: number;
+      demat: { count: number; total_value: number };
+      mutual_funds: { count: number; total_value: number };
+      insurance: { count: number; total_value: number };
+      nps: { count: number; total_value: number };
     };
   };
   demat_accounts: DematAccount[];
-  mutual_funds: MutualFund[];
-  insurance: InsurancePolicy[];
+  mutual_funds: MutualFundFolio[];
+  insurance: {
+    life_insurance_policies: LifeInsurancePolicy[];
+  };
   nps: NPSAccount[];
 }
 
 interface DematAccount {
+  demat_type: 'CDSL' | 'NSDL';
   dp_id: string;
   dp_name: string;
   client_id: string;
-  equities: Equity[];
-  corporate_bonds: Bond[];
+  bo_id?: string;
+  value: number;
+  linked_holders: Array<{ name: string; pan: string }>;
+  holdings: {
+    equities: Equity[];
+    corporate_bonds: CorporateBond[];
+    government_securities: GovernmentSecurity[];
+    aifs: AIF[];
+    demat_mutual_funds: DematMutualFund[];
+  };
+  additional_info: object;
 }
 
 interface Equity {
