@@ -14,6 +14,7 @@ CAS Parser uses a credit-based billing system. Each API call consumes credits ba
 | KFintech CAS Generator | **0.5** | `POST /v4/kfintech/generate` |
 | Gmail Inbox Pull | **0.2** | `POST /v4/inbox/cas` |
 | Inbound Email | **0.2** | `POST /v4/inbound-email` |
+| Portfolio Links | **0.2** | Portal (no API endpoint) |
 | Gmail Connect/Status/Disconnect | **Free** | `POST /v4/inbox/*` |
 | Failed operations | **0** | Never charged |
 
