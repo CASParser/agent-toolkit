@@ -15,7 +15,7 @@ CAS Parser is an API platform that extracts structured data from Indian financia
 |-----------|-------------|
 | **AGENTS.md** | Integration rules your AI agent follows automatically |
 | **SKILL.md** | Domain knowledge (Indian financial concepts, API architecture, integration patterns) |
-| **Templates** | 14 copy-paste-ready code snippets (Python, Node.js, React, HTML, curl) |
+| **Templates** | 15 copy-paste-ready code snippets (Python, Node.js, React, HTML, curl) |
 | **References** | 9 detailed guides + full OpenAPI spec for complex flows |
 | **MCP Server** | 17 live API tools your agent can call directly (parse, fetch, import, credits) |
 
@@ -136,12 +136,14 @@ Or try specific tasks:
 
 ## Key Features
 
-- **Portfolio Connect SDK** — Drop-in React/HTML widget for the full import flow (recommended for frontend)
+- **Portfolio Connect SDK** — Drop-in React/Vue/Angular/HTML widget for the full import flow (recommended for frontend)
+- **Portfolio Links** — Branded no-code collection pages for advisors (`link.casparser.in/your-company`)
 - **CAS Parsing** — Parse CDSL, NSDL, CAMS/KFintech PDFs into structured JSON via REST API
 - **Contract Notes** — Parse broker trade documents from Zerodha, Groww, Upstox, ICICI
 - **CDSL Fetch** — Download CAS directly from CDSL via OTP authentication
 - **Email Import** — Import CAS files from Gmail via OAuth
-- **Unified Response** — Consistent JSON format regardless of CAS source
+- **Inbound Email** — Create dedicated email addresses for CAS forwarding with webhook delivery
+- **Unified Response** — Consistent JSON format across all 9 asset classes
 
 ## Project Structure
 
@@ -160,6 +162,7 @@ Or try specific tasks:
     │   ├── python-email-import.py     # Python: Gmail inbox import
     │   ├── python-contract-note.py    # Python: parse contract notes
     │   ├── python-kfintech-generate.py# Python: KFintech mailback
+    │   ├── python-inbound-email.py    # Python: inbound email forwarding
     │   ├── python-credits-check.py    # Python: quota & usage monitoring
     │   ├── nodejs-smart-parse.js      # Node.js: smart parse
     │   ├── nodejs-cdsl-fetch.js       # Node.js: CDSL OTP flow
@@ -187,6 +190,8 @@ Or try specific tasks:
 - [Node.js / TypeScript SDK](https://www.npmjs.com/package/cas-parser-node) — Official TypeScript API client (npm)
 - [Python SDK](https://github.com/CASParser/cas-parser-python) — Official Python API client (GitHub)
 - [MCP Server](https://www.npmjs.com/package/cas-parser-node-mcp) — AI agent tools with Code Mode (npm)
+- [LLM Context (llms.txt)](https://casparser.in/llms.txt) — Short LLM context file
+- [LLM Context (full)](https://casparser.in/llms-full.txt) — Comprehensive LLM context with full API reference
 - [Agents.md](https://agents.md/) — Standard for agent behaviors
 - [Agent Skills Spec](https://agentskills.io/home) — Specification for agent skills
 

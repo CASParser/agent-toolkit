@@ -71,10 +71,16 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - Manage with `GET /v4/inbound-email`, `GET /v4/inbound-email/{id}`, `DELETE /v4/inbound-email/{id}`.
 - **Billing:** 0.2 credits per successfully processed email.
 
+### Portfolio Links (No-Code CAS Collection)
+- **For advisors/wealth managers who want to collect CAS from clients without writing code.**
+- Create branded collection pages at `link.casparser.in/{your-company}`. Clients visit the link, upload their CAS, and parsed data is emailed to the advisor.
+- Zero code, zero API integration required — managed entirely via the [web portal](https://app.casparser.in/portfolio-links).
+- This is not a public API feature — it's a self-service tool for advisors.
+
 ### Portfolio Connect SDK (Recommended for Frontend)
 - **For web/frontend apps, start here.** The `@cas-parser/connect` npm package provides a drop-in modal widget.
 - The widget handles file upload, password entry, Gmail inbox import, and CDSL OTP fetch — all in a single UI.
-- Works with React, Next.js, or vanilla HTML/JS (via UMD bundle).
+- Works with React, Next.js, Vue, Angular, or vanilla HTML/JS (via UMD bundle).
 - Install: `npm install @cas-parser/connect`
 - Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the frontend.
 - See [`references/portfolio-connect-sdk.md`](skills/casparser/references/portfolio-connect-sdk.md) for full integration guide.
@@ -103,7 +109,16 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 
 ### Credits & Billing
 - Each API call consumes credits. Check quota with `POST /v1/credits`.
-- Different features cost different credits (e.g., parsing = 1 credit, CDSL fetch = 0.5 credits).
+- Credit costs per operation:
+  | Feature | Credits |
+  |---------|---------|
+  | CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | **1.0** |
+  | Contract Note Parse | **0.5** |
+  | CDSL OTP Fetch | **0.5** |
+  | KFintech CAS Generator | **0.5** |
+  | Gmail Inbox Pull | **0.2** |
+  | Inbound Email | **0.2** |
+  | Failed operations | **0** |
 - Monitor usage with `POST /v1/usage` and `POST /v1/usage/summary`.
 
 ## Before Implementing
@@ -111,6 +126,7 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 Always check [`skills/casparser/SKILL.md`](skills/casparser/SKILL.md) for existing templates and patterns before writing new CAS Parser integration code. The skill contains ready-to-use examples for:
 
 - **Portfolio Connect SDK** — React, Next.js, vanilla HTML (recommended for frontend)
+- **Portfolio Links** — No-code branded CAS collection pages for advisors
 - Parsing CAS PDFs — Python, Node.js, curl (for backend/server-side)
 - CDSL OTP fetch flow
 - KFintech mailback generation

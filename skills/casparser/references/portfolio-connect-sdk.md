@@ -8,6 +8,8 @@ Portfolio Connect is an embeddable UI widget (`@cas-parser/connect` npm package)
 - **Gmail Import** — OAuth-based inbox scanning for CAS attachments
 - **CDSL Fetch** — OTP-based direct download from CDSL portal
 
+Works with React, Next.js, Vue, Angular, or vanilla HTML/JS (via UMD bundle).
+
 ## Installation
 
 ```bash

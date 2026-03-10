@@ -1,6 +1,6 @@
 ---
 title: CAS Generator for Mutual Funds
-description: Request mutual fund CAS statements programmatically. Get 50+ years of portfolio history from both KFintech and CAMS RTAs.
+description: Request mutual fund CAS statements programmatically. Get 50+ years of transaction history from both KFintech and CAMS RTAs.
 ---
 
 ## Overview
@@ -17,7 +17,7 @@ flowchart LR
 ```
 
 **Use cases:**
-- Client onboarding (request 50 years of history)
+- Client onboarding (request 50+ years of transaction history)
 - Automated monthly portfolio updates
 - Filling gaps in transaction history
 
@@ -124,7 +124,7 @@ requests.post(..., json={
     "password": "Abcdefghi12$"
 })
 
-# Complete history (50+ years)
+# Complete transaction history (50+ years)
 requests.post(..., json={
     "email": "user@example.com",
     "from_date": "1970-01-01",
