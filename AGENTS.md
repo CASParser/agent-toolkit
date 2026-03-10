@@ -118,6 +118,7 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
   | KFintech CAS Generator | **0.5** |
   | Gmail Inbox Pull | **0.2** |
   | Inbound Email | **0.2** |
+  | Portfolio Links | **0.2** |
   | Failed operations | **0** |
 - Monitor usage with `POST /v1/usage` and `POST /v1/usage/summary`.
 
