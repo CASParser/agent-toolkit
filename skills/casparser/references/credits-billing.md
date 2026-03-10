@@ -4,19 +4,20 @@
 
 CAS Parser uses a credit-based billing system. Each API call consumes credits based on the feature used. Credits reset at the start of each billing period.
 
-## Credit Costs (Approximate)
+## Credit Costs
 
-Credit costs vary by plan. The table below shows typical costs:
+| Feature | Credits | Endpoint |
+|---------|---------|----------|
+| CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | **1.0** | `POST /v4/smart/parse` |
+| Contract Note Parse | **0.5** | `POST /v4/contract_note/parse` |
+| CDSL OTP Fetch | **0.5** | `POST /v4/cdsl/fetch` |
+| KFintech CAS Generator | **0.5** | `POST /v4/kfintech/generate` |
+| Gmail Inbox Pull | **0.2** | `POST /v4/inbox/cas` |
+| Inbound Email | **0.2** | `POST /v4/inbound-email` |
+| Gmail Connect/Status/Disconnect | **Free** | `POST /v4/inbox/*` |
+| Failed operations | **0** | Never charged |
 
-| Feature | Typical Credits |
-|---------|----------------|
-| CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | ~1.0 |
-| Contract Note Parse | ~1.0 |
-| CDSL Fetch (OTP verify step) | ~1.5 |
-| KFintech CAS Generator | ~2.0 |
-| Email Import (list CAS files) | ~0.2 |
-
-Check your actual credit costs via `POST /v1/credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) do not consume credits.
+Check your credit balance via `POST /v1/credits` — the `enabled_features` field shows what's available on your plan. Only successful operations consume credits. Failed requests (invalid PDF, wrong password, etc.) are never charged.
 
 ## Checking Credits
 
@@ -38,12 +39,18 @@ Response:
   "is_unlimited": false,
   "resets_at": "2026-02-15T00:00:00Z",
   "enabled_features": [
+    "smart_parser",
     "cams_kfintech_cas_parser",
     "cdsl_cas_parser",
     "nsdl_cas_parser",
     "contract_note_parser",
-    "cdsl_otp_fetch",
-    "email_import"
+    "kfintech_cas_generator",
+    "cdsl_cas_fetch",
+    "inbox_pull",
+    "inbox_connect",
+    "inbox_disconnect",
+    "inbox_status",
+    "inbound_email"
   ]
 }
 ```
@@ -99,14 +106,15 @@ Response:
 {
   "status": "success",
   "summary": {
-    "total_credits": 45.5,
-    "total_requests": 42,
+    "total_credits": 34.6,
+    "total_requests": 44,
     "by_feature": [
       { "feature": "cdsl_cas_parser", "credits": 15.0, "requests": 15 },
       { "feature": "nsdl_cas_parser", "credits": 10.0, "requests": 10 },
       { "feature": "cams_kfintech_cas_parser", "credits": 5.0, "requests": 5 },
-      { "feature": "cdsl_otp_fetch", "credits": 9.0, "requests": 6 },
-      { "feature": "email_import", "credits": 1.2, "requests": 6 }
+      { "feature": "cdsl_cas_fetch", "credits": 3.0, "requests": 6 },
+      { "feature": "inbox_pull", "credits": 1.2, "requests": 6 },
+      { "feature": "inbound_email", "credits": 0.4, "requests": 2 }
     ]
   }
 }

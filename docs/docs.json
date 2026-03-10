@@ -15,6 +15,10 @@
   "navbar": {
     "links": [
       {
+        "label": "Speak to an Engineer",
+        "href": "https://calendly.com/sameer_kumar/cas-parser-1-1-with-sameer"
+      },
+      {
         "label": "Support",
         "href": "https://casparser.in/contact"
       }
@@ -96,6 +100,7 @@
               "guides/cas-generator",
               "guides/gmail-inbox",
               "guides/inbound-email",
+              "guides/portfolio-links",
               "guides/cdsl-fetch",
               "guides/mcp-server"
             ]
