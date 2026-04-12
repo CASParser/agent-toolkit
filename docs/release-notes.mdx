@@ -3,8 +3,54 @@ title: Release Notes
 description: Latest updates from CAS Parser
 ---
 
-**Last Updated:** February 2026  
+**Last Updated:** April 2026  
 **API Documentation:** [API Reference](/api-reference/introduction)
+
+---
+
+## 📅 April 2026
+
+### Teams & Collaboration
+
+Collaborate with your team under one account. Invite colleagues by email, manage roles, and share a single billing plan.
+
+**How it works:**
+1. Create a team from the [Teams page](https://app.casparser.in/teams)
+2. Invite members by email
+3. Members join and start working — usage is billed to the team owner
+
+**Details:**
+- Role-based access: Owners manage billing and team; Members get scoped access
+- Up to 50 members per team
+
+### Test Mode
+
+Try any CAS Parser endpoint without signing up, uploading a PDF, or spending credits. One toggle, instant sample data.
+
+**Web Portal:** Global "Test Mode" switch in the header. When active, the sandbox key (`sandbox-with-json-responses`) is injected automatically. File upload is replaced with a "Get Sample Portfolio" button.
+
+**API:** All endpoints now short-circuit in sandbox mode — no PDF, password, or form fields required. Previously, sandbox users still needed to provide a valid file.
+
+---
+
+## 📅 March 2026
+
+### Web Portal Overhaul
+
+Complete redesign of the [Web Portal](https://app.casparser.in) with professional-grade financial data views and multi-portfolio support.
+
+**Data views:** New finance-themed tables across all sections (Demat, Mutual Funds, Insurance, NPS) with pinned totals and improved readability.
+
+**Multi-portfolio tabs:** Upload and compare multiple CAS portfolios side-by-side. Tab labels show investor name + total value. Summary cards for Total, Mutual Funds, Demat, and Insurance values. All data stored locally in the browser.
+
+**Analytics & Insights:**
+- Portfolio analytics with interactive charts and visualizations
+- Advisor Insights: health score, risk warnings, redundancy detection, STCG/LTCG tax analysis, SIP detection
+- XLSX/CSV/JSON export now covers all API fields including demat transactions and NPS (separate sheets)
+
+### Multi-lingual CDSL Support
+
+CDSL eCAS PDFs containing regional language text are now parsed correctly. The parser now supports all 22 official Indian languages — Hindi, Gujarati, Bengali, Telugu, Kannada, Malayalam, Tamil, Punjabi, Odia, Urdu, Manipuri, Santhal, and more.
 
 ---
 
