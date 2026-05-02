@@ -17,6 +17,26 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 - **Never hardcode API keys.** Use environment variables (`CASPARSER_API_KEY`).
 - For frontend/SDK usage, generate short-lived **access tokens** (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the client.
 
+#### Getting a real API key (agent auth flow)
+If `CASPARSER_API_KEY` is not set and the user needs a real key (not the sandbox), automate the sign-up flow:
+```bash
+# 1. Generate a random token (agent-side, no API call needed)
+TOKEN=$(openssl rand -hex 32)
+
+# 2. Ask the user to open this URL in their browser
+#    Replace YOUR_AGENT_NAME with your actual name (e.g. "Claude Code", "Cursor")
+echo "Open https://app.casparser.in/agent-auth?token=${TOKEN}&client_name=YOUR_AGENT_NAME"
+
+# 3. Poll until the user approves (every 5 seconds)
+curl -s https://api.casparser.in/v1/agent-auth/token/${TOKEN}
+# → {"status": "pending"}  — keep polling
+# → {"status": "approved", "api_key": "sk_...", "email": "..."}  — done!
+
+# 4. Write the key to .env
+echo "CASPARSER_API_KEY=sk_..." >> .env
+```
+The user signs in via the browser and clicks Approve. The API key is delivered once then deleted (one-shot). Token expires after 10 minutes. Write the key to `.env` as `CASPARSER_API_KEY` and use it via the `x-api-key` header for all subsequent requests.
+
 ### Python Integration
 - **Recommended:** Use `requests` library with the REST API directly. All Python templates in this toolkit use `requests`.
 - **Official SDK:** [`cas-parser-python`](https://github.com/CASParser/cas-parser-python) — a thin wrapper from the CAS Parser team.

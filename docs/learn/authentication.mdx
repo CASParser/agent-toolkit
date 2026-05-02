@@ -9,10 +9,32 @@ All CAS Parser API requests require authentication via the `x-api-key` header.
 
 ### Getting Your API Key
 
+#### From the dashboard
+
 1. Sign up at [app.casparser.in](https://app.casparser.in)
 2. Navigate to **Developers** → **API Keys**
 3. Click **Generate API Key**
 4. Copy and store securely
+
+#### From a coding agent (automated)
+
+If you're using a coding agent (Claude Code, Cursor, etc.), it can obtain an API key
+for you automatically. The agent generates a one-time URL, you open it in your browser
+and approve, and the agent receives the key — no copy-paste needed.
+
+```bash
+# 1. Agent generates a random token
+TOKEN=$(openssl rand -hex 32)
+
+# 2. You open this URL and sign in
+# https://app.casparser.in/agent-auth?token=${TOKEN}&client_name=YOUR_AGENT_NAME
+
+# 3. Agent polls until you approve
+curl -s https://api.casparser.in/v1/agent-auth/token/${TOKEN}
+# → {"status": "approved", "api_key": "sk_...", "email": "..."}
+```
+
+See the [API reference](/api-reference/introduction) for full details on the agent auth endpoints.
 
 <Warning>
   **Never expose your API key in client-side code.** Use access tokens for frontend applications.

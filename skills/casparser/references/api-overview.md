@@ -18,6 +18,20 @@ Every API request requires an `x-api-key` header:
 x-api-key: your-api-key-here
 ```
 
+### Getting an API Key
+
+**From the dashboard:** Sign up at [app.casparser.in](https://app.casparser.in) and go to Developers → API Keys.
+
+**From a coding agent (automated):** Generate a random token, ask the user to open a URL, and poll for the result:
+```bash
+TOKEN=$(openssl rand -hex 32)
+echo "Open https://app.casparser.in/agent-auth?token=${TOKEN}&client_name=YOUR_AGENT_NAME"
+# Poll every 5s:
+curl -s https://api.casparser.in/v1/agent-auth/token/${TOKEN}
+# → {"status": "approved", "api_key": "sk_...", "email": "..."}
+```
+After receiving the key, write it to `.env` as `CASPARSER_API_KEY=sk_...`.
+
 ### Sandbox Key
 
 For development and testing, use:
