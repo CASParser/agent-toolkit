@@ -74,6 +74,20 @@ tags:
       Endpoints for managing access tokens for the Portfolio Connect SDK.
       Use these to generate short-lived `at_` prefixed tokens that can be safely passed to frontend applications.
       Access tokens can be used in place of API keys on all v4 endpoints.
+  - name: Agent Auth
+    description: |
+      Endpoints for coding agents to obtain API keys via a browser-based approval flow.
+      
+      **How it works:**
+      1. Agent generates a random token locally (e.g. `openssl rand -hex 32`). No API call needed.
+      2. Agent asks the user to open `https://app.casparser.in/agent-auth?token=<token>&client_name=<name>`
+      3. User signs in via the browser and clicks Approve.
+      4. Agent polls `GET /v1/agent-auth/token/{token}` every 5 seconds until the key is delivered.
+      
+      **Security:**
+      - Token must be 16-128 characters (recommended: 64 hex chars / 256 bits)
+      - Approved keys are delivered once (one-shot) and then deleted
+      - Tokens expire after 10 minutes if not approved
 
 paths:
   # ============================================
@@ -425,6 +439,172 @@ paths:
                     example: "Token has expired"
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Agent Auth Endpoints
+  # ============================================
+
+  /v1/agent-auth/token/{token}/approve:
+    post:
+      tags:
+        - Agent Auth
+      summary: Approve Agent Authorization
+      description: |
+        Called by the frontend after the user signs in.
+        
+        Verifies the identity token, creates or looks up the user's API key,
+        and stores it against the token for the agent to poll via `GET /v1/agent-auth/token/{token}`.
+        
+        **This endpoint is called by the browser, not by agents directly.**
+      operationId: agentAuthApprove
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token the agent generated and included in the approval URL. Must be 16-128 characters.
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_token
+              properties:
+                id_token:
+                  type: string
+                  description: Identity token obtained after the user signs in on the approval page
+                client_name:
+                  type: string
+                  description: Name of the agent/application (stored in customer metadata for audit)
+                  example: "Claude Code"
+      responses:
+        '200':
+          description: Authorization approved. The API key is now available for the agent to poll.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "approved"
+                  email:
+                    type: string
+                    example: "user@example.com"
+        '400':
+          description: Invalid token length or invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token must be 16-128 characters"
+        '401':
+          description: Invalid or expired identity token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Invalid identity token"
+        '403':
+          description: Unsupported sign-in method
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Unsupported sign-in method"
+        '409':
+          description: Token was already approved (only the first approval is accepted)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token already approved or storage unavailable"
+
+  /v1/agent-auth/token/{token}:
+    get:
+      tags:
+        - Agent Auth
+      summary: Poll for Agent Authorization Result
+      description: |
+        Agent polls this endpoint to check if the user has approved the authorization.
+        
+        Returns `{"status": "pending"}` while waiting for user approval.
+        Returns `{"status": "approved", "api_key": "sk_...", "email": "..."}` once approved.
+        
+        **One-shot delivery:** the API key is returned exactly once. After delivery, the token is deleted
+        and subsequent polls return `{"status": "pending"}`.
+        
+        **Recommended polling interval:** 5 seconds. Token expires after 10 minutes.
+      operationId: agentAuthPoll
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token the agent generated locally and included in the approval URL.
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
+      responses:
+        '200':
+          description: Current authorization status
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    title: Pending
+                    properties:
+                      status:
+                        type: string
+                        enum: ["pending"]
+                    example:
+                      status: "pending"
+                  - type: object
+                    title: Approved
+                    properties:
+                      status:
+                        type: string
+                        enum: ["approved"]
+                      api_key:
+                        type: string
+                        description: The issued API key (sk_ prefix)
+                      email:
+                        type: string
+                        description: Email of the user who approved
+                    example:
+                      status: "approved"
+                      api_key: "sk_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+                      email: "user@example.com"
+        '400':
+          description: Invalid token length
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token must be 16-128 characters"
 
   # ============================================
   # Core Endpoints (portfolio-parser server)
