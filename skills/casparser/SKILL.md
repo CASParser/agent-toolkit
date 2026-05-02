@@ -294,13 +294,18 @@ See: [`templates/python-email-import.py`](templates/python-email-import.py), [`t
 
 ### Pattern 5: Inbound Email (Email Forwarding)
 
-For apps that want users to forward CAS emails instead of uploading files or connecting Gmail:
-1. Create inbound email → 2. User forwards CAS → 3. Webhook delivers files
+For apps that want users to forward CAS emails instead of uploading files or connecting Gmail.
+
+`callback_url` is optional:
+- **Set it** → we POST each parsed email to your webhook as it arrives.
+- **Omit it** → retrieve files via `GET /v4/inbound-email/{id}/files`. The Portfolio Connect widget uses this variant when `enableInboundEmail: true` is set — no backend needed.
+
+Flow: 1. Create inbound email → 2. User forwards CAS → 3. Receive files (via webhook or polling)
 
 ```python
 import requests, os
 
-# Step 1: Create inbound email
+# Step 1: Create inbound email (with callback_url → webhook delivery)
 response = requests.post(
     "https://api.casparser.in/v4/inbound-email",
     headers={"x-api-key": os.environ["CASPARSER_API_KEY"]},
@@ -325,6 +330,12 @@ print(f"Forward CAS to: {data['email']}")
 #               "url": "https://...", "expires_in": 172800 }],
 #   "count": 1
 # }
+
+# Retrieve files from any inbound email (works regardless of callback_url)
+# GET /v4/inbound-email/{id}/files?since=<cursor>
+#   → returns { files: [...], cursor: "<ISO timestamp>" }
+# Pass the returned cursor as `since` on the next poll. Use for SDK polling,
+# backend polling as an alternative to webhooks, or replay/backfill.
 ```
 
 ### Pattern 6: KFintech Mailback

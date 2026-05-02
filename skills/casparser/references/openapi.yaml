@@ -112,8 +112,7 @@ paths:
                     description: Number of credits used this billing period
                     example: 15.0
                   remaining:
-                    type: number
-                    nullable: true
+                    type: [number, "null"]
                     description: Remaining credits (null if unlimited)
                     example: 35.0
                   limit:
@@ -125,9 +124,8 @@ paths:
                     description: Whether the account has unlimited credits
                     example: false
                   resets_at:
-                    type: string
+                    type: [string, "null"]
                     format: date-time
-                    nullable: true
                     description: When credits reset (ISO 8601)
                     example: "2026-02-15T00:00:00Z"
                   enabled_features:
@@ -1090,20 +1088,14 @@ paths:
         - Inbound Email
       summary: Create Inbound Email
       description: |
-        Create a dedicated inbound email address for collecting CAS statements via email forwarding.
-        
-        **How it works:**
-        1. Create an inbound email with your webhook URL
-        2. Display the email address to your user (e.g., "Forward your CAS to ie_xxx@import.casparser.in")
-        3. When an investor forwards a CAS email, we verify the sender and deliver to your webhook
-        
-        **Webhook Delivery:**
-        - We POST to your `callback_url` with JSON body containing files (matching EmailCASFile schema)
-        - Failed deliveries are retried automatically with exponential backoff
-        
-        **Inactivity:**
-        - Inbound emails with no activity in 30 days are marked inactive
-        - Active inbound emails remain operational indefinitely
+        Create a dedicated inbound email address for collecting CAS statements
+        via email forwarding. When an investor forwards a CAS email to this
+        address, we verify the sender and make the file available to you.
+
+        `callback_url` is **optional**:
+        - **Set it** — we POST each parsed email to your webhook as it arrives.
+        - **Omit it** — retrieve files via `GET /v4/inbound-email/{id}/files`
+          without building a webhook consumer.
       operationId: createInboundEmail
       security:
         - ApiKeyAuth: []
@@ -1113,8 +1105,6 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - callback_url
               properties:
                 alias:
                   type: string
@@ -1122,12 +1112,10 @@ paths:
                   maxLength: 32
                   pattern: '^[a-z0-9][a-z0-9-]*[a-z0-9]$'
                   description: |
-                    Optional custom email prefix for user-friendly addresses.
-                    - Must be 3-32 characters
-                    - Alphanumeric + hyphens only
-                    - Must start and end with letter/number
-                    - Example: `john-portfolio@import.casparser.in`
-                    - If omitted, generates random ID like `ie_abc123xyz@import.casparser.in`
+                    Optional custom email prefix (e.g.
+                    `john-portfolio@import.casparser.in`). 3-32 chars,
+                    alphanumeric + hyphens, must start/end with a letter or
+                    number. If omitted, a random ID is generated.
                   example: "john-portfolio"
                 reference:
                   type: string
@@ -1137,11 +1125,12 @@ paths:
                     Returned in webhook payload for correlation.
                   example: "user_12345"
                 callback_url:
-                  type: string
+                  type: [string, "null"]
                   format: uri
                   description: |
-                    Webhook URL where we POST email notifications.
-                    Must be HTTPS in production (HTTP allowed for localhost during development).
+                    Optional webhook URL where we POST parsed emails. Must be
+                    HTTPS in production (HTTP allowed for localhost). If omitted,
+                    retrieve files via `GET /v4/inbound-email/{id}/files`.
                   example: "https://api.yourapp.com/webhooks/cas-email"
                 allowed_sources:
                   type: array
@@ -1168,7 +1157,7 @@ paths:
                     source: "onboarding"
       responses:
         '201':
-          description: Mailbox created successfully
+          description: Inbound email created successfully
           content:
             application/json:
               schema:
@@ -1186,8 +1175,8 @@ paths:
         - Inbound Email
       summary: List Inbound Emails
       description: |
-        List all mailboxes associated with your API key.
-        Returns active and inactive mailboxes (deleted mailboxes are excluded).
+        List all inbound emails associated with your API key.
+        Returns active and paused inbound emails (deleted ones are excluded).
       operationId: listInboundEmails
       security:
         - ApiKeyAuth: []
@@ -1248,7 +1237,7 @@ paths:
         - Inbound Email
       summary: Get Inbound Email Details
       description: |
-        Retrieve details of a specific mailbox including statistics.
+        Retrieve details of a specific inbound email including statistics.
       operationId: getInboundEmail
       security:
         - ApiKeyAuth: []
@@ -1258,11 +1247,10 @@ paths:
           required: true
           schema:
             type: string
-          description: Inbound Email ID (e.g., ie_a1b2c3d4e5f6)
-          example: "ie_a1b2c3d4e5f6"
+          description: Inbound Email ID
       responses:
         '200':
-          description: Mailbox details
+          description: Inbound email details
           content:
             application/json:
               schema:
@@ -1270,7 +1258,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Mailbox not found
+          description: Inbound email not found
           content:
             application/json:
               schema:
@@ -1296,7 +1284,7 @@ paths:
           description: Inbound Email ID to delete
       responses:
         '200':
-          description: Mailbox deleted
+          description: Inbound email deleted
           content:
             application/json:
               schema:
@@ -1307,11 +1295,93 @@ paths:
                     example: "success"
                   msg:
                     type: string
-                    example: "Mailbox deleted successfully"
+                    example: "Inbound email deleted successfully"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           description: Inbound email not found
+
+  /v4/inbound-email/{inbound_email_id}/files:
+    get:
+      tags:
+        - Inbound Email
+      summary: List Files Received
+      description: |
+        Retrieve CAS files forwarded to this inbound email. Available for every
+        inbound email, regardless of whether a `callback_url` was set — use it
+        to avoid building a webhook consumer, to poll alongside a webhook, or
+        to replay missed webhook deliveries.
+
+        Pass the `cursor` from the previous response as `since` to receive only
+        new files.
+      operationId: listInboundEmailFiles
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: inbound_email_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Inbound Email ID (e.g., ie_a1b2c3d4e5f6)
+          example: "ie_a1b2c3d4e5f6"
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: |
+            ISO 8601 timestamp. Only files with `received_at` strictly greater
+            than this value are returned. Use the `cursor` value from the
+            previous response.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Maximum files to return.
+      responses:
+        '200':
+          description: Files received at this inbound email since the cursor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  files:
+                    type: array
+                    description: Files received (sorted oldest-first)
+                    items:
+                      $ref: '#/components/schemas/ReceivedEmailCASFile'
+                  count:
+                    type: integer
+                    example: 1
+                  cursor:
+                    type: [string, "null"]
+                    format: date-time
+                    description: Pass as `since` on the next poll. `null` if no files and no prior cursor.
+                    example: "2025-02-21T10:45:12.000123+00:00"
+        '400':
+          description: Malformed query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Inbound email not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
@@ -1726,14 +1796,12 @@ components:
           description: Additional information specific to the equity
           properties:
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period (beta)
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period (beta)
           
     CorporateBond:
@@ -1763,14 +1831,12 @@ components:
           description: Additional information specific to the corporate bond
           properties:
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period (beta)
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period (beta)
           
     GovernmentSecurity:
@@ -1800,14 +1866,12 @@ components:
           description: Additional information specific to the government security
           properties:
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period (beta)
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period (beta)
           
     AIF:
@@ -1837,14 +1901,12 @@ components:
           description: Additional information specific to the AIF
           properties:
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period (beta)
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period (beta)
           
     DematMutualFund:
@@ -1874,14 +1936,12 @@ components:
           description: Additional information specific to the mutual fund
           properties:
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period (beta)
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period (beta)
           
     MutualFundFolio:
@@ -1986,14 +2046,12 @@ components:
               type: string
               description: AMFI code for the scheme (CAMS/KFintech)
             open_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Opening balance units for the statement period
             close_units:
-              type: number
+              type: [number, "null"]
               format: float
-              nullable: true
               description: Closing balance units for the statement period
           
     Transaction:
@@ -2012,27 +2070,24 @@ components:
           description: Transaction type. Possible values are PURCHASE, PURCHASE_SIP, REDEMPTION, SWITCH_IN, SWITCH_IN_MERGER, SWITCH_OUT, SWITCH_OUT_MERGER, DIVIDEND_PAYOUT, DIVIDEND_REINVEST, SEGREGATION, STAMP_DUTY_TAX, TDS_TAX, STT_TAX, MISC, REVERSAL, UNKNOWN.
           enum: [PURCHASE, PURCHASE_SIP, REDEMPTION, SWITCH_IN, SWITCH_IN_MERGER, SWITCH_OUT, SWITCH_OUT_MERGER, DIVIDEND_PAYOUT, DIVIDEND_REINVEST, SEGREGATION, STAMP_DUTY_TAX, TDS_TAX, STT_TAX, MISC, REVERSAL, UNKNOWN]
         amount:
-          type: number
+          type: [number, "null"]
           format: float
-          nullable: true
           description: Transaction amount in currency (computed from units × price/NAV)
         units:
           type: number
           format: float
           description: Number of units involved in transaction
         nav:
-          type: number
+          type: [number, "null"]
           format: float
-          nullable: true
           description: NAV/price per unit on transaction date
         balance:
           type: number
           format: float
           description: Balance units after transaction
         dividend_rate:
-          type: number
+          type: [number, "null"]
           format: float
-          nullable: true
           description: Dividend rate (for DIVIDEND_PAYOUT transactions)
         additional_info:
           type: object
@@ -2212,9 +2267,30 @@ components:
           example: "https://cdn.casparser.in/email-cas/user123/cdsl_20250115_a1b2c3d4.pdf"
         expires_in:
           type: integer
-          description: URL expiration time in seconds (default 86400 = 24 hours)
+          description: |
+            URL expiration time in seconds. Defaults vary by source:
+            - Gmail Inbox Import: 86400 (24h)
+            - Inbound Email with `callback_url` set: 172800 (48h)
+            - Inbound Email without `callback_url`: aligned with the session TTL (~30 min)
           example: 86400
-          
+
+    ReceivedEmailCASFile:
+      description: |
+        A CAS file that has arrived at an inbound email address.
+        Matches `EmailCASFile` plus a `received_at` timestamp used as a
+        monotonic cursor for polling.
+      allOf:
+        - $ref: '#/components/schemas/EmailCASFile'
+        - type: object
+          properties:
+            received_at:
+              type: string
+              format: date-time
+              description: |
+                ISO 8601 timestamp (microsecond precision) when the file was
+                persisted. Use as the `since` cursor on subsequent polls.
+              example: "2025-02-21T10:45:12.000123+00:00"
+
     ContractNoteResponse:
       type: object
       properties:
@@ -2480,14 +2556,16 @@ components:
           description: The inbound email address to forward CAS statements to
           example: "ie_a1b2c3d4e5f6@import.casparser.in"
         reference:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Your internal reference identifier
           example: "user_12345"
         callback_url:
           type: string
           format: uri
-          description: Webhook URL for email notifications
+          description: |
+            Webhook URL for email notifications. If set, we POST each parsed
+            email here. If omitted, files are only retrievable via
+            `GET /v4/inbound-email/{id}/files`.
           example: "https://api.yourapp.com/webhooks/cas-email"
         allowed_sources:
           type: array
@@ -2499,7 +2577,7 @@ components:
         status:
           type: string
           enum: [active, paused]
-          description: Current mailbox status
+          description: Current inbound email lifecycle status
           example: "active"
         metadata:
           type: object
@@ -2511,12 +2589,12 @@ components:
         created_at:
           type: string
           format: date-time
-          description: When the mailbox was created
+          description: When the inbound email was created
           example: "2025-02-21T10:30:00Z"
         updated_at:
           type: string
           format: date-time
-          description: When the mailbox was last updated
+          description: When the inbound email was last updated
           example: "2025-02-21T10:30:00Z"
 
     InboundEmailWebhookPayload:
@@ -2533,8 +2611,7 @@ components:
           description: Email address of the investor who forwarded the CAS email
           example: "investor@gmail.com"
         reference:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Your reference from inbound email creation
           example: "user_12345"
         metadata:

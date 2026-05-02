@@ -55,21 +55,28 @@ CAS Parser is an API platform for parsing Indian financial portfolio documents:
 ### Inbound Email (Email Forwarding)
 - Create dedicated email addresses for investors to forward CAS statements to.
 - **Use case:** Lower-friction alternative when OAuth or file upload isn't practical.
-- Flow:
+- `callback_url` is **optional** at creation time and controls delivery:
+  - **Set** → we POST each parsed email to your webhook as it arrives. Files also remain retrievable via `GET /v4/inbound-email/{id}/files` for 48h.
+  - **Omitted** → no webhook. The inbound email is scoped to a 30-minute sliding session (each poll extends the TTL). Retrieve files via `GET /v4/inbound-email/{id}/files`. The Portfolio Connect widget uses this variant when `enableInboundEmail: true`.
+- Flow (webhook variant):
   1. `POST /v4/inbound-email` with `callback_url` → returns unique email like `ie_xxx@import.casparser.in`.
   2. Investor forwards CAS email to this address.
   3. We validate the sender against known CAS authorities, upload PDF attachments to cloud storage, and POST to your `callback_url`.
+- `GET /v4/inbound-email/{id}/files` is available regardless of whether `callback_url` is set — use it for polling, as a backend alternative to webhooks, or to replay/backfill missed webhook deliveries. Cursor-paginated by `received_at` (microsecond-monotonic); pass the returned cursor as `since` on the next call.
 - Only emails from verified CAS authorities are processed:
   - CDSL: `eCAS@cdslstatement.com`
   - NSDL: `NSDL-CAS@nsdl.co.in`
   - CAMS: `donotreply@camsonline.com`
   - KFintech: `samfS@kfintech.com`
-- Webhook payload includes `forwarded_by` (investor's email) at the top level, and `files` array uses the same `EmailCASFile` schema as Gmail Import.
+- Webhook payload includes `forwarded_by` (investor's email) at the top level, and `files` array uses the same `EmailCASFile` schema as Gmail Import. The polling endpoint returns `ReceivedEmailCASFile` — the same fields plus a `received_at` cursor.
 - `sender_email` in files is the CAS authority email (lowercase), `forwarded_by` is the investor who forwarded the email.
-- Presigned download URLs expire in 48 hours.
-- Optional `alias` field for friendly addresses (e.g., `john-portfolio@import.casparser.in`).
-- Manage with `GET /v4/inbound-email`, `GET /v4/inbound-email/{id}`, `DELETE /v4/inbound-email/{id}`.
-- **Billing:** 0.2 credits per successfully processed email.
+- Presigned download URLs expire in 48 hours when `callback_url` is set; without it, they're aligned with the 30-min session TTL.
+- Optional `alias` field for friendly addresses (e.g., `john-portfolio@import.casparser.in`). Not recommended when `callback_url` is omitted, since the inbound email is short-lived.
+- Manage with `GET /v4/inbound-email`, `GET /v4/inbound-email/{id}`, `GET /v4/inbound-email/{id}/files`, `DELETE /v4/inbound-email/{id}`.
+- **Billing:**
+  - **0.2 credits** per validated email received, regardless of whether `callback_url` is set (charged on successful webhook delivery, or when the file is stored for polling).
+  - Inbound email creation and polling reads (`GET /files`) are free.
+  - Portfolio Connect widget additionally incurs **1.0 credit** when it auto-parses the received file (standard smart parse cost).
 
 ### Portfolio Links (No-Code CAS Collection)
 - **For advisors/wealth managers who want to collect CAS from clients without writing code.**

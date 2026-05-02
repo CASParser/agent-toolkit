@@ -5,9 +5,33 @@ description: 'Create dedicated email addresses for investors to forward CAS stat
 
 ## Overview
 
-The Inbound Email API lets you create unique email addresses (like `ie_xyz@import.casparser.in`) where your users can forward their CAS statements. When an email arrives, we validate the sender, upload attachments to cloud storage, and POST the details to your webhook.
+The Inbound Email API lets you create unique email addresses (like `ie_xyz@import.casparser.in`) where your users can forward their CAS statements. When an email arrives, we validate the sender, upload attachments to cloud storage, and deliver the result to your app.
 
 **Use Case**: Lower-friction alternative to OAuth or manual file upload.
+
+---
+
+## Delivery options
+
+`callback_url` is **optional**. It controls how you receive parsed files:
+
+<CardGroup cols={2}>
+  <Card title="With callback_url" icon="webhook">
+    We `POST` parsed files to your URL whenever an investor forwards a CAS.
+    Files also remain retrievable via `GET /v4/inbound-email/{id}/files` for 48h.
+
+    **Best for:** server-side workflows, recurring statement ingestion.
+  </Card>
+  <Card title="Without callback_url" icon="browser">
+    Retrieve files via `GET /v4/inbound-email/{id}/files`. The address is
+    scoped to a 30-min sliding session (each poll extends it). Used by the
+    Portfolio Connect widget when `enableInboundEmail: true`.
+
+    **Best for:** onboarding flows, frontend-heavy apps with no backend.
+  </Card>
+</CardGroup>
+
+Sender validation, file format, and security guarantees are identical regardless of `callback_url`.
 
 ---
 
@@ -34,6 +58,10 @@ sequenceDiagram
 ---
 
 ## Quick Start
+
+<Note>
+  The Quick Start below provides a `callback_url` for webhook delivery. For a frontend-only flow with no backend, see [Use with Portfolio Connect](#use-with-portfolio-connect).
+</Note>
 
 ### 1. Create an Inbound Email
 
@@ -92,10 +120,9 @@ curl -X POST https://api.casparser.in/v4/inbound-email \
 
 </CodeGroup>
 
-**Response:**
+**Response (`201 Created`):**
 ```json
 {
-  "status": "success",
   "inbound_email_id": "ie_a1b2c3d4e5f6",
   "email": "ie_a1b2c3d4e5f6@import.casparser.in",
   "callback_url": "https://yourapp.com/webhooks/cas-email",
@@ -103,9 +130,14 @@ curl -X POST https://api.casparser.in/v4/inbound-email \
   "reference": "user_12345",
   "metadata": {"plan": "premium"},
   "status": "active",
-  "created_at": "2025-02-22T20:00:00Z"
+  "created_at": "2025-02-22T20:00:00Z",
+  "updated_at": "2025-02-22T20:00:00Z"
 }
 ```
+
+<Note>
+  `status` here is the inbound email's lifecycle (`active` / `paused`).
+</Note>
 
 ---
 
@@ -221,6 +253,95 @@ app.post('/webhooks/cas-email', async (req, res) => {
 
 ---
 
+## Retrieving Files
+
+The `GET /v4/inbound-email/{id}/files` endpoint returns every file that has been
+forwarded to a given inbound email address. It's **available on every eligible inbound
+email**, regardless of whether you configured a `callback_url`. Common uses:
+
+- **Frontend polling** — the Portfolio Connect widget polls it automatically when `enableInboundEmail: true` (see below).
+- **Backend polling** — use it instead of (or alongside) a webhook if a pull model fits your stack better.
+- **Replay / backfill** — fetch files that were delivered via webhook if your endpoint was down or needs to re-process them.
+
+```bash
+GET /v4/inbound-email/{inbound_email_id}/files?since=<last_cursor>&limit=20
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "files": [
+    {
+      "message_id": "att_xyz789",
+      "filename": "cdsl_20250222_att_xyz789.pdf",
+      "cas_type": "cdsl",
+      "url": "https://storage.casparser.in/inbound-email/...",
+      "expires_in": 172800,
+      "received_at": "2025-02-22T20:01:12.000123+00:00"
+    }
+  ],
+  "count": 1,
+  "cursor": "2025-02-22T20:01:12.000123+00:00"
+}
+```
+
+**Cursor pagination.** Pass the returned `cursor` as `since` on your next call
+to receive only files that arrived after it. Timestamps are guaranteed
+strictly monotonic at microsecond precision, so no entry is returned twice.
+Persist the cursor on your side between polls.
+
+<Note>
+  `expires_in` differs depending on whether `callback_url` was set: long-lived presigned URLs (48h) when set, aligned with the session TTL when omitted. Treat the value as authoritative and refresh by re-polling if a download fails.
+</Note>
+
+**Retention.**
+
+- With `callback_url` set: files retained **48 hours** from arrival.
+- Without `callback_url`: files retained for the sliding session TTL; each call extends it.
+
+---
+
+## Use with Portfolio Connect
+
+For frontend-only apps, the Portfolio Connect widget can drive the entire
+flow: it creates a short-lived inbound email (without a `callback_url`),
+displays it to the user, polls the retrieval endpoint above, and auto-parses
+the forwarded PDF. No webhook required.
+
+```tsx React
+import { PortfolioConnect } from '@cas-parser/connect';
+
+<PortfolioConnect
+  accessToken={accessToken}
+  config={{
+    enableInboundEmail: true,
+    inboundEmail: {
+      // All fields optional
+      allowedSources: ['cdsl', 'nsdl'],
+      reference: 'user_12345',
+      metadata: { plan: 'premium' },
+      pollIntervalMs: 3000,      // default
+      sessionTimeoutMs: 1800000, // 30 min — matches backend TTL
+    },
+  }}
+  onSuccess={(data, metadata) => {
+    // metadata.source === 'INBOUND_EMAIL'
+    // metadata.received_at === ISO timestamp
+    console.log('Parsed:', data);
+  }}
+/>
+```
+
+The widget automatically:
+- Creates an inbound email via `POST /v4/inbound-email` (no `callback_url`).
+- Displays the address with a copy button.
+- Polls `GET /v4/inbound-email/{id}/files` every few seconds.
+- Parses the first file it receives and emits `onSuccess`.
+- Deletes the inbound email on widget close (or lets the 30-min TTL expire it).
+
+---
+
 ## Sender Validation
 
 We automatically verify that forwarded emails originated from trusted CAS authorities:
@@ -278,10 +399,13 @@ If you only need CDSL statements, set `"allowed_sources": ["cdsl"]` to reject ot
 
 ## Billing
 
-**0.2 credits** per successfully processed email (validated sender + webhook delivered).
+**0.2 credits** per validated email received, regardless of whether `callback_url` was set — charged on successful webhook delivery, or when the file is stored for polling.
 
-- Emails from unknown senders: **Not billed**
-- Failed webhook delivery (after retries): **Still billed** (email was valid)
+Notes:
+- Inbound email creation, listing, and polling reads (`GET /files`): **free**.
+- Emails from unknown senders: **not billed**.
+- Webhook-delivery failures (after retries): **still billed** — the email was valid.
+- The Portfolio Connect widget incurs an additional **1.0 credit** when it auto-parses the received file (standard smart-parse cost).
 
 ---
 
@@ -317,7 +441,9 @@ We validate:
 
 ### Data Retention
 
-- Inbound email configs: Active indefinitely, marked inactive after 30 days without emails
+- Inbound email configs with `callback_url` set: active indefinitely, marked inactive after 30 days without emails.
+- Inbound email configs without `callback_url`: auto-expire after **30 minutes** of no polling activity (sliding TTL).
+- Received file records (for polling): retained **48 hours** when `callback_url` is set; aligned with the session TTL otherwise.
 
 ---
 
