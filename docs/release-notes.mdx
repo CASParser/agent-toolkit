@@ -10,21 +10,15 @@ description: Latest updates from CAS Parser
 
 ## 📅 May 2026
 
-### Frontend-only Inbound Email — skip the download-then-upload step
+### Frontend-only Inbound Email
 
-Investors no longer need to download their CAS PDF, find the file, and upload it. They can forward the email straight to a unique address and the parsed portfolio lands back in your app — all from the browser, with no backend required.
+Investors can now forward their CAS email to a unique address and get parsed data back in-browser — no download, no upload, no webhook to build.
 
-This was technically possible in February's Inbound Email release, but only via a webhook. With this update:
+- `callback_url` is now optional on `POST /v4/inbound-email`
+- New `GET /v4/inbound-email/{id}/files` for polling (cursor-paginated by `received_at`)
+- Portfolio Connect picks this up via `enableInboundEmail: true`
 
-- **`callback_url` is now optional** when creating an inbound email — omit it to skip building a webhook consumer.
-- **New endpoint `GET /v4/inbound-email/{id}/files`** retrieves files received at the address. Available regardless of whether `callback_url` was set — use it for polling as an alternative to webhooks, or to replay/backfill missed webhook deliveries. Cursor-paginated by `received_at` (microsecond-monotonic).
-- **Portfolio Connect widget** picks this up automatically when you set `enableInboundEmail: true` — the widget provisions a one-time forwarding address, polls for the file, and parses it in-browser.
-
-**Behavior summary:**
-- **`callback_url` set** — unchanged: we POST each parsed email to your webhook. Files also remain retrievable via the new endpoint for 48h.
-- **`callback_url` omitted** — the address is scoped to a 30-minute sliding session (each poll extends the TTL). Retrieve files via the new endpoint.
-
-**Billing:** **0.2 credits** per validated email received, regardless of whether `callback_url` was set. Polling reads (`GET /files`) are free. The Portfolio Connect widget incurs an additional **1.0 credit** when it auto-parses the received file.
+**Billing:** 0.2 credits per validated email received, regardless of delivery mode.
 
 **Start here:** [Inbound Email Guide](/guides/inbound-email)
 
@@ -32,25 +26,14 @@ This was technically possible in February's Inbound Email release, but only via 
 
 ## 📅 April 2026
 
-### Portfolio Connect 2.0 — conversion-focused UX overhaul
+### Portfolio Connect 2.0
 
-A major redesign of the [`@cas-parser/connect`](https://www.npmjs.com/package/@cas-parser/connect) widget aimed at end-user conversion. The widget now reads like a consumer product instead of a developer tool.
+Major redesign of the [`@cas-parser/connect`](https://www.npmjs.com/package/@cas-parser/connect) widget focused on end-user conversion.
 
-**Plain-language copy throughout.** Industry jargon ("CAS PDF", "depository", "demat", "BO ID", "KFintech") is gone from every user-facing screen. The mutual fund registrar (CAMS / KFintech) is now an implementation detail — both surface as "Mutual Funds" in the UI.
-
-**Demat path restructured: broker first, method second.** Picking "Stocks & Demat" now opens a broker grid with logos. After picking a broker, the next screen is broker-specific: CDSL brokers see "Fetch instantly via OTP" or "Upload statement"; NSDL brokers go straight to upload (CDSL OTP doesn't work for NSDL). On the upload screen for CDSL brokers, an inline "Don't have the file? Fetch instantly via OTP" alternative removes the dead-end where users had to back out and re-navigate.
-
-**New import path — inbound email forwarding.** New `enableInboundEmail` flag and `<InboundEmailMode>` screen. The widget provisions a one-time forwarding address, polls for the file with backoff, pauses while the tab is hidden, and tears down the address on unmount.
-
-**Cross-flow handoffs.** The widget now nudges users between methods instead of stranding them at dead ends:
-- *Mailback → inbound email.* After requesting a mutual fund CAS by email, the confirmation screen offers "Auto-import via forwarding" as the primary CTA.
-- *Empty Gmail inbox → request a fresh CAS / forward from another inbox.* Targeted next actions instead of just "Refresh".
-- *Inbound email waiting → upload directly.* "I already have the file — upload it" alongside Cancel.
-- *Upload screen → inbound email.* "Got it in your email? Forward via email" card on every upload screen when `enableInboundEmail` is on.
-
-**Polish.** Trust signals on OTP and CAS-request forms ("We don't store your PAN, BO ID or date of birth"). Mid-flow accidental dismissal protection (clicking outside the modal during an active upload, OTP wait, or inbound email session prompts before closing). Friendly success summary with `cas_type` mapped to plain labels ("Mutual Funds", "Stocks (CDSL)", "Stocks (NSDL)"). Error screens stripped of developer-targeted error code pills — technical detail still flows to `onError` for analytics.
-
-**Note on naming.** Pre-release `CASConnect*` / `CASType` aliases have been removed in favour of the canonical `PortfolioConnect*` / `PortfolioType` names. `accessToken` and `apiKey` are first-class equal alternatives — pass either one.
+- Plain-language copy — no more "CAS", "depository", "BO ID", "KFintech" in user-facing screens
+- Demat path reordered: broker first, method second (CDSL brokers get instant OTP fetch; NSDL go straight to upload)
+- New `enableInboundEmail` flag adds an in-widget "forward from email" path
+- Cross-flow handoffs replace dead ends (mailback → forward, empty inbox → request fresh, upload ↔ forward)
 
 ```bash
 npm install @cas-parser/connect@^2
@@ -58,22 +41,17 @@ npm install @cas-parser/connect@^2
 
 ### Portfolio Connect 2.1 — `onSubmit` now covers every flow
 
-The `onSubmit` interceptor previously fired only on the file-upload path. As of 2.1 it covers **all four** intercept-capable flows: file upload, Gmail inbox, inbound email, and CDSL fetch. Embedders can now collect PDFs from any of these flows and forward them to their own backend without burning parse credits — useful for Portfolio Links-style workflows where you want the PDF, not the parsed JSON.
-
-The handler signature changed to a discriminated `SubmitInput`:
+`onSubmit` used to fire only on file upload. It now covers file upload, Gmail inbox, inbound email, and CDSL fetch — so you can intercept PDFs from any path and send them to your own backend.
 
 ```ts
 onSubmit={async (input, password) => {
   if (input.kind === 'file') {
-    // input.file: File, input.source === 'UPLOAD'
+    // input.file: File — source: 'UPLOAD'
   } else {
-    // input.pdfUrl: string (presigned, valid 24–48h)
-    // input.source: 'INBOX' | 'INBOUND_EMAIL' | 'CDSL_FETCH'
+    // input.pdfUrl: string — source: 'INBOX' | 'INBOUND_EMAIL' | 'CDSL_FETCH'
   }
 }}
 ```
-
-The MF-generator (KFintech mailback) flow stays out of scope — the CAS is delivered to the investor's email out of band, so the SDK never sees a PDF. Callers that don't pass `onSubmit` see no behavior change.
 
 ### Teams & Collaboration
 
