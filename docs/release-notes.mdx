@@ -10,6 +10,20 @@ description: Latest updates from CAS Parser
 
 ## 📅 May 2026
 
+### KYC PAN Status
+
+New endpoint to verify KYC registration status for any PAN number across all five SEBI-registered KRAs — in a single call, with normalized output.
+
+- `POST /v1/kyc/pan/status` — returns `kyc_compliant` boolean + full per-KRA breakdown
+- Raw CVL portal strings normalized to clean enums (`validated`, `registered`, `on_hold`, etc.)
+- All KRA objects always return the same six keys (no missing fields to guard against)
+
+**Credits:** 0.5 per successful lookup. Failed lookups are not billed.
+
+**Start here:** [KYC PAN Status Guide](/guides/kyc-pan-status)
+
+---
+
 ### Frontend-only Inbound Email
 
 Investors can now forward their CAS email to a unique address and get parsed data back in-browser — no download, no upload, no webhook to build.

@@ -459,7 +459,7 @@ When parsing fails, the API returns a `failed` status with a descriptive error m
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `status` | string | Always `failed` for errors (or `error` for system errors) |
+| `status` | string | `failed` for API errors, `error` for authentication errors |
 | `msg` | string | Human-readable error message |
 
 **Note:** All responses include an `X-Request-ID` header (format: `req_<alphanumeric>`) for debugging and support.

@@ -88,6 +88,17 @@ tags:
       - Token must be 16-128 characters (recommended: 64 hex chars / 256 bits)
       - Approved keys are delivered once (one-shot) and then deleted
       - Tokens expire after 10 minutes if not approved
+  - name: KYC
+    description: |
+      Endpoints for verifying KYC (Know Your Customer) status of Indian investors.
+
+      **Data source:** CVL KRA public inquiry portal (cvlkra.com), which aggregates
+      records from all five SEBI-registered KRAs: CVL, NDML, CAMS, Karvy, and KFin.
+
+      **Status normalization:** Raw CVL portal strings are normalized into clean enums.
+      See the `kyc_status` property on `KycPanStatusResponse` for the full list.
+
+      **Credits:** 0.5 per successful lookup. Failed lookups are not billed.
 
 paths:
   # ============================================
@@ -1563,6 +1574,181 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ============================================
+  # KYC Endpoints
+  # ============================================
+
+  /v1/kyc/pan/status:
+    post:
+      tags:
+        - KYC
+      summary: Check KYC PAN Status
+      description: |
+        Query KYC registration status for a PAN number across all five SEBI-registered KRAs
+        (CVL, NDML, CAMS, Karvy, KFin) via the CVL KRA portal.
+
+        Raw portal status strings are normalized into clean enums (see `kyc_status`).
+
+        **`kyc_compliant`** is `true` only when `kyc_status` is `validated` or `registered`.
+        Use this for quick onboarding gate decisions.
+
+        **`remarks`** on a KRA object is only actionable when `status` is `on_hold` —
+        it contains the reason (e.g. `"APPLICANT PHOTO MISMATCH"`). For `validated` KRAs,
+        remarks like `"FATCA NOT APPLICABLE"` can be safely ignored.
+
+        **Note:** This endpoint may take up to 60 seconds. Set your client timeout accordingly.
+
+        **Credits:** 0.5 per successful lookup. Failed lookups are not billed.
+      operationId: checkKycPanStatus
+      security:
+        - ApiKeyAuth: []
+        - AccessTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pan_no
+              properties:
+                pan_no:
+                  type: string
+                  description: PAN number to look up (10 characters, uppercase)
+                  example: "ABCDE1234F"
+                  pattern: '^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
+      responses:
+        '200':
+          description: KYC status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycPanStatusResponse'
+              examples:
+                validated:
+                  summary: Fully validated KYC (CVL, DigiLocker)
+                  value:
+                    status: "success"
+                    pan: "ABCDE1234F"
+                    kyc_compliant: true
+                    kyc_status: "validated"
+                    kyc_mode: "digilocker"
+                    active_kra: "cvl"
+                    registered_on: "2011-03-18"
+                    last_updated_on: "2024-09-19"
+                    kras:
+                      cvl:
+                        status: "validated"
+                        registered_on: "2011-03-18"
+                        last_updated_on: "2024-09-19"
+                        kyc_mode: "digilocker"
+                        remarks: null
+                        raw_status: null
+                      ndml:
+                        status: "not_available"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      cams:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      karvy:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      kfin:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                on_hold:
+                  summary: KYC on hold — action required
+                  value:
+                    status: "success"
+                    pan: "XYZPQ9876R"
+                    kyc_compliant: false
+                    kyc_status: "on_hold"
+                    kyc_mode: "normal"
+                    active_kra: "cvl"
+                    registered_on: "2026-04-24"
+                    last_updated_on: "2026-04-25"
+                    kras:
+                      cvl:
+                        status: "on_hold"
+                        registered_on: "2026-04-24"
+                        last_updated_on: "2026-04-25"
+                        kyc_mode: "normal"
+                        remarks: "APPLICANT PHOTO MISMATCH IN THE APPLICATION,FATCA NOT APPLICABLE"
+                        raw_status: "ON HOLD - New KYC"
+                      ndml:
+                        status: "not_available"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      cams:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      karvy:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+                      kfin:
+                        status: "not_checked"
+                        registered_on: null
+                        last_updated_on: null
+                        kyc_mode: null
+                        remarks: null
+                        raw_status: null
+        '400':
+          description: Missing or invalid pan_no
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "failed"
+                msg: "pan_no is required"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: KYC service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "failed"
+                msg: "KYC service unavailable. Please try again later."
+        '504':
+          description: KYC service timed out (CVL portal slow/unresponsive)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "failed"
+                msg: "KYC service timed out. Please try again."
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -2776,6 +2962,155 @@ components:
           format: date-time
           description: When the inbound email was last updated
           example: "2025-02-21T10:30:00Z"
+
+    KycPanStatusResponse:
+      type: object
+      description: Normalized KYC status response for a PAN number
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: "success"
+        pan:
+          type: string
+          description: The PAN number that was queried (uppercase)
+          example: "ABCDE1234F"
+        kyc_compliant:
+          type: boolean
+          description: |
+            `true` if the investor has a `validated` or `registered` KYC record.
+            Use this as the primary onboarding gate signal.
+          example: true
+        kyc_status:
+          type: string
+          description: |
+            Normalized KYC status from the active KRA. Possible values:
+            - `validated` — KYC complete, investor can onboard and transact freely
+            - `registered` — KYC registered; some restrictions may apply depending on your platform's onboarding policy
+            - `under_process` — Recently submitted KYC, still being processed by KRA
+            - `on_hold` — KYC on hold due to discrepancy; check `remarks` on the KRA object
+            - `rejected` — KYC rejected; investor must submit fresh KYC
+            - `legacy` — Old/incomplete record; re-KYC recommended
+            - `not_available` — No KYC record found at any KRA
+            - `unknown` — Portal returned an unrecognized string; `raw_status` preserved
+          enum:
+            - validated
+            - registered
+            - under_process
+            - on_hold
+            - rejected
+            - legacy
+            - not_available
+            - unknown
+          example: "validated"
+        kyc_mode:
+          type: [string, "null"]
+          description: |
+            How the KYC was completed. Possible values:
+            - `normal` — Physical/paper KYC
+            - `digilocker` — DigiLocker-backed digital KYC
+            - `ekyc` — Aadhaar eKYC (OTP-based)
+            - `paper` — Offline paper submission
+            - `unknown` — Mode string not recognized
+          enum:
+            - normal
+            - digilocker
+            - ekyc
+            - paper
+            - unknown
+          example: "digilocker"
+        active_kra:
+          type: [string, "null"]
+          description: Short key of the KRA where the active KYC record was found
+          enum:
+            - cvl
+            - ndml
+            - cams
+            - karvy
+            - kfin
+          example: "cvl"
+        registered_on:
+          type: [string, "null"]
+          format: date
+          description: Date the KYC was first registered at the active KRA (ISO 8601)
+          example: "2020-07-02"
+        last_updated_on:
+          type: [string, "null"]
+          format: date
+          description: Date the KYC record was last updated at the active KRA (ISO 8601)
+          example: "2024-09-19"
+        kras:
+          type: object
+          description: Per-KRA status breakdown. All five KRA keys are always present.
+          required: [cvl, ndml, cams, karvy, kfin]
+          properties:
+            cvl:
+              $ref: '#/components/schemas/KycKraStatus'
+            ndml:
+              $ref: '#/components/schemas/KycKraStatus'
+            cams:
+              $ref: '#/components/schemas/KycKraStatus'
+            karvy:
+              $ref: '#/components/schemas/KycKraStatus'
+            kfin:
+              $ref: '#/components/schemas/KycKraStatus'
+
+    KycKraStatus:
+      type: object
+      description: |
+        KYC status at a single KRA. All six keys are always present (never omitted).
+        For `not_checked` and `not_available` KRAs, date/mode/remarks fields are `null`.
+      required: [status, registered_on, last_updated_on, kyc_mode, remarks, raw_status]
+      properties:
+        status:
+          type: string
+          description: Normalized status for this KRA
+          enum:
+            - validated
+            - registered
+            - under_process
+            - on_hold
+            - rejected
+            - legacy
+            - not_available
+            - not_checked
+            - unknown
+          example: "validated"
+        registered_on:
+          type: [string, "null"]
+          format: date
+          description: Date KYC was first registered at this KRA
+          example: "2020-07-02"
+        last_updated_on:
+          type: [string, "null"]
+          format: date
+          description: Date KYC was last updated at this KRA
+          example: "2024-09-19"
+        kyc_mode:
+          type: [string, "null"]
+          description: KYC completion mode at this KRA
+          enum:
+            - normal
+            - digilocker
+            - ekyc
+            - paper
+            - unknown
+          example: "digilocker"
+        remarks:
+          type: [string, "null"]
+          description: |
+            Remarks from the KRA. Only actionable when `status` is `on_hold`
+            (e.g. `"APPLICANT PHOTO MISMATCH"`). For `validated` KRAs,
+            remarks like `"FATCA NOT APPLICABLE"` can be safely ignored.
+            Multiple remarks are comma-separated.
+          example: "APPLICANT PHOTO MISMATCH IN THE APPLICATION,FATCA NOT APPLICABLE"
+        raw_status:
+          type: [string, "null"]
+          description: |
+            The original status string from the CVL portal. `null` for exact-matched
+            statuses. Non-null when a fuzzy match or unknown string was encountered —
+            preserve this for debugging and to help us expand coverage.
+          example: "ON HOLD - New KYC"
 
     InboundEmailWebhookPayload:
       type: object
