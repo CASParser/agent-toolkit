@@ -1,0 +1,203 @@
+---
+title: KYC PAN Status
+description: Check KYC registration status for any PAN number across all five SEBI-registered KRAs in a single API call.
+---
+
+## Overview
+
+The KYC PAN Status API queries the CVL KRA public portal to retrieve KYC registration status for a given PAN number across all five SEBI-registered KRAs (CVL, NDML, CAMS, Karvy, KFin).
+
+**What you get:**
+- A normalized `kyc_status` enum — no raw portal strings to parse
+- A single `kyc_compliant` boolean for quick onboarding gate decisions
+- Per-KRA breakdown with dates, mode, and remarks
+
+**What you need:**
+- PAN number (10 characters)
+
+<Note>
+  This endpoint queries the CVL KRA portal and may take up to 60 seconds. Set your client timeout to at least 60 seconds.
+</Note>
+
+## Quick example
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v1/kyc/pan/status",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"pan_no": "ABCDE1234F"},
+    timeout=60
+)
+
+data = response.json()
+
+if data["kyc_compliant"]:
+    print(f"KYC verified — status: {data['kyc_status']}, KRA: {data['active_kra']}")
+else:
+    print(f"KYC not compliant — status: {data['kyc_status']}")
+```
+
+## Response structure
+
+```json
+{
+  "status": "success",
+  "pan": "ABCDE1234F",
+  "kyc_compliant": true,
+  "kyc_status": "validated",
+  "kyc_mode": "digilocker",
+  "active_kra": "cvl",
+  "registered_on": "2020-07-02",
+  "last_updated_on": "2024-09-19",
+  "kras": {
+    "cvl": {
+      "status": "validated",
+      "registered_on": "2020-07-02",
+      "last_updated_on": "2024-09-19",
+      "kyc_mode": "digilocker",
+      "remarks": null,
+      "raw_status": null
+    },
+    "ndml": {
+      "status": "not_available",
+      "registered_on": null,
+      "last_updated_on": null,
+      "kyc_mode": null,
+      "remarks": null,
+      "raw_status": null
+    },
+    "cams":  { "status": "not_checked", ... },
+    "karvy": { "status": "not_checked", ... },
+    "kfin":  { "status": "not_checked", ... }
+  }
+}
+```
+
+All six keys on every KRA object are always present — `null` when not applicable.
+
+## `kyc_status` values
+
+| Status | Meaning | `kyc_compliant` |
+|--------|---------|----------------|
+| `validated` | KYC complete, investor can transact freely | `true` |
+| `registered` | KYC registered; some restrictions may apply — check your platform's policy | `true` |
+| `under_process` | Recently submitted, still being processed by KRA | `false` |
+| `on_hold` | Discrepancy detected — check `remarks` on the KRA object | `false` |
+| `rejected` | KYC rejected — investor must submit fresh KYC | `false` |
+| `legacy` | Old/incomplete record — re-KYC recommended | `false` |
+| `not_available` | KRA was queried but has no record for this PAN | `false` |
+| `not_checked` | KRA was not queried by the portal | `false` |
+| `unknown` | Unrecognized portal string — `raw_status` field preserved | `false` |
+
+## Handling `on_hold`
+
+When `kyc_status` is `on_hold`, check `remarks` on the active KRA object for the reason:
+
+```python
+data = response.json()
+
+if data["kyc_status"] == "on_hold":
+    active = data["active_kra"]
+    remarks = data["kras"][active]["remarks"]
+    # e.g. "APPLICANT PHOTO MISMATCH IN THE APPLICATION"
+    print(f"KYC on hold: {remarks}")
+```
+
+<Warning>
+  `remarks` may contain multiple comma-separated reasons (e.g. `"APPLICANT PHOTO MISMATCH IN THE APPLICATION,FATCA NOT APPLICABLE"`). `FATCA NOT APPLICABLE` is informational and not an error.
+</Warning>
+
+## `raw_status` field
+
+For exact-matched statuses (the common case), `raw_status` is `null`.
+
+`raw_status` is non-null when the portal returned a string the API hadn't seen before and used a fuzzy match instead of an exact one. If you see a non-null `raw_status` in production, please [report it](https://casparser.in/contact) so we can add it to the exact map.
+
+## Full example
+
+```python
+import requests
+
+API_KEY = "YOUR_API_KEY"
+
+def check_kyc_status(pan: str) -> dict:
+    """
+    Check KYC status for a PAN number.
+    
+    Returns the normalized response or raises on error.
+    """
+    response = requests.post(
+        "https://api.casparser.in/v1/kyc/pan/status",
+        headers={"x-api-key": API_KEY},
+        json={"pan_no": pan},
+        timeout=60  # CVL KRA portal queries can take up to 60s
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+# Basic onboarding gate
+data = check_kyc_status("ABCDE1234F")
+
+if data["kyc_compliant"]:
+    # Allow onboarding
+    print(f"KYC verified ({data['kyc_status']}) via {data['active_kra'].upper()} KRA")
+    print(f"Registered on: {data['registered_on']}")
+else:
+    status = data["kyc_status"]
+    if status == "on_hold":
+        active = data["active_kra"]
+        remarks = data["kras"][active]["remarks"]
+        print(f"KYC on hold — reason: {remarks}")
+    elif status == "not_available":
+        print("No KYC record found. Investor needs to complete KYC.")
+    elif status == "rejected":
+        print("KYC rejected. Investor must submit fresh KYC.")
+    elif status == "under_process":
+        print("KYC is being processed. Check again later.")
+    elif status == "legacy":
+        print("Old KYC record. Re-KYC recommended.")
+    else:
+        print(f"KYC status: {status}")
+```
+
+## Credit usage
+
+| Operation | Credits |
+|-----------|---------|
+| Successful lookup | 0.5 |
+| Failed lookup (any error) | 0 |
+
+## Error handling
+
+| HTTP status | Cause | Action |
+|-------------|-------|--------|
+| `400` | `pan_no` missing or empty | Validate request body |
+| `401` | Invalid or missing API key | Check `x-api-key` header |
+| `503` | CVL KRA service unavailable | Retry with exponential backoff |
+| `504` | CVL KRA portal timed out | Retry with exponential backoff |
+
+```python
+try:
+    data = check_kyc_status("ABCDE1234F")
+except requests.exceptions.Timeout:
+    print("Request timed out — CVL KRA portal is slow. Retry.")
+except requests.exceptions.HTTPError as e:
+    if e.response.status_code in (503, 504):
+        print("KYC service unavailable — retry in a few seconds")
+    else:
+        raise
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CAS Parsing" icon="file-pdf" href="/guides/parsing">
+    Parse portfolio statements after KYC is verified
+  </Card>
+  <Card title="CDSL OTP Fetch" icon="mobile" href="/guides/cdsl-fetch">
+    Fetch CAS files directly from CDSL
+  </Card>
+</CardGroup>
