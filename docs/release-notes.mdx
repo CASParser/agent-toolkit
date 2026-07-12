@@ -3,8 +3,25 @@ title: Release Notes
 description: Latest updates from CAS Parser
 ---
 
-**Last Updated:** May 2026  
+**Last Updated:** June 2026  
 **API Documentation:** [API Reference](/api-reference/introduction)
+
+---
+
+## 📅 June 2026
+
+### KYC DigiLocker
+
+Consent-based flow to fetch an investor's government-issued documents (Aadhaar, PAN, driving licence) directly from DigiLocker. A separate feature from KYC PAN Status.
+
+- `POST /v1/kyc/digilocker/account-lookup` — pre-consent check (free)
+- `POST /v1/kyc/digilocker/session` — start a consent session, get `authorization_url` (free)
+- `POST /v1/kyc/digilocker/result/{session_id}` — one-call aggregate: verified identity, issued documents, and parsed PAN/Aadhaar/driving licence
+- Explicit `consent` + `consent_purpose` captured as a consent receipt (DPDP / RBI)
+
+**Credits:** account-lookup and session are free; `result` is 0.25 per call.
+
+**Start here:** [KYC DigiLocker Guide](/guides/kyc-digilocker)
 
 ---
 

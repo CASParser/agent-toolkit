@@ -101,525 +101,6 @@ tags:
       **Credits:** 0.5 per successful lookup. Failed lookups are not billed.
 
 paths:
-  # ============================================
-  # Account & Authorization Endpoints
-  # New paths: /v1/credits, /v1/usage, /v1/usage/summary, /v1/token, /v1/token/verify
-  # Legacy paths still supported: /credits, /logs, /logs/summary, /v1/access-token, /v1/verify-token
-  # ============================================
-  
-  /v1/credits:
-    post:
-      tags:
-        - Authorization
-      summary: Check API Credits
-      description: |
-        Check your remaining API credits and usage for the current billing period.
-        
-        Returns:
-        - Number of API calls used and remaining credits
-        - Credit limit and reset date
-        - List of enabled features for your plan
-        
-        Credits reset at the start of each billing period.
-      operationId: checkCredits
-      security:
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Credits information retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  used:
-                    type: number
-                    description: Number of credits used this billing period
-                    example: 15.0
-                  remaining:
-                    type: [number, "null"]
-                    description: Remaining credits (null if unlimited)
-                    example: 35.0
-                  limit:
-                    type: integer
-                    description: Total credit limit for billing period
-                    example: 50
-                  is_unlimited:
-                    type: boolean
-                    description: Whether the account has unlimited credits
-                    example: false
-                  resets_at:
-                    type: [string, "null"]
-                    format: date-time
-                    description: When credits reset (ISO 8601)
-                    example: "2026-02-15T00:00:00Z"
-                  enabled_features:
-                    type: array
-                    items:
-                      type: string
-                    description: List of API features enabled for your plan
-                    example: ["cams_kfintech_cas_parser", "cdsl_cas_parser", "nsdl_cas_parser"]
-        '400':
-          description: Bad request (e.g., using access token instead of API key)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Access tokens cannot be used for credits API. Use your API key instead."
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /v1/usage:
-    post:
-      tags:
-        - Authorization
-      summary: Get API Usage Logs
-      description: |
-        Retrieve detailed API usage logs for your account.
-        
-        Returns a list of API calls with timestamps, features used, status codes, and credits consumed.
-        Useful for monitoring usage patterns and debugging.
-        
-        **Legacy path:** `/logs` (still supported)
-      operationId: getUsageLogs
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                start_time:
-                  type: string
-                  format: date-time
-                  description: Start time filter (ISO 8601). Defaults to 30 days ago.
-                  example: "2026-01-01T00:00:00Z"
-                end_time:
-                  type: string
-                  format: date-time
-                  description: End time filter (ISO 8601). Defaults to now.
-                  example: "2026-01-31T23:59:59Z"
-                limit:
-                  type: integer
-                  minimum: 1
-                  maximum: 500
-                  default: 100
-                  description: Maximum number of logs to return
-      responses:
-        '200':
-          description: Usage logs retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  logs:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        request_id:
-                          type: string
-                          description: Unique request identifier
-                          example: "req_2xYz7KpL8mN3Ab"
-                        feature:
-                          type: string
-                          description: API feature used
-                          example: "cdsl_cas_parser"
-                        path:
-                          type: string
-                          description: API endpoint path
-                          example: "/v4/cdsl/parse"
-                        status_code:
-                          type: integer
-                          description: HTTP response status code
-                          example: 200
-                        credits:
-                          type: number
-                          description: Credits consumed for this request
-                          example: 1.0
-                        timestamp:
-                          type: string
-                          format: date-time
-                          description: When the request was made
-                          example: "2026-01-15T14:30:00Z"
-                  count:
-                    type: integer
-                    description: Number of logs returned
-                    example: 25
-        '400':
-          description: Bad request (e.g., using access token)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Access tokens cannot be used for logs API. Use your API key instead."
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /v1/usage/summary:
-    post:
-      tags:
-        - Authorization
-      summary: Get Usage Summary
-      description: |
-        Get aggregated usage statistics grouped by feature.
-        
-        Useful for understanding which API features are being used most and tracking usage trends.
-        
-        **Legacy path:** `/logs/summary` (still supported)
-      operationId: getUsageSummary
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                start_time:
-                  type: string
-                  format: date-time
-                  description: Start time filter (ISO 8601). Defaults to start of current month.
-                end_time:
-                  type: string
-                  format: date-time
-                  description: End time filter (ISO 8601). Defaults to now.
-      responses:
-        '200':
-          description: Usage summary retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  summary:
-                    type: object
-                    properties:
-                      total_credits:
-                        type: number
-                        description: Total credits consumed in the period
-                        example: 45.5
-                      total_requests:
-                        type: integer
-                        description: Total API requests made in the period
-                        example: 42
-                      by_feature:
-                        type: array
-                        description: Usage breakdown by feature
-                        items:
-                          type: object
-                          properties:
-                            feature:
-                              type: string
-                              description: API feature name
-                              example: "cdsl_cas_parser"
-                            credits:
-                              type: number
-                              description: Credits consumed by this feature
-                              example: 15.0
-                            requests:
-                              type: integer
-                              description: Number of requests for this feature
-                              example: 15
-        '400':
-          description: Bad request (e.g., using access token)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Access tokens cannot be used for logs API. Use your API key instead."
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  # ============================================
-  # Portfolio Connect SDK Endpoints
-  # ============================================
-  /v1/token:
-    post:
-      tags:
-        - Portfolio Connect
-      summary: Generate Access Token
-      description: |
-        Generate a short-lived access token from your API key.
-        
-        **Use this endpoint from your backend** to create tokens that can be safely passed to frontend/SDK.
-        
-        **Legacy path:** `/v1/access-token` (still supported)
-        
-        Access tokens:
-        - Are prefixed with `at_` for easy identification
-        - Valid for up to 60 minutes
-        - Can be used in place of API keys on all v4 endpoints
-        - Cannot be used to generate other access tokens
-      operationId: generateAccessToken
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                expiry_minutes:
-                  type: integer
-                  description: Token validity in minutes (max 60)
-                  default: 60
-                  maximum: 60
-                  minimum: 1
-                  example: 60
-      responses:
-        '200':
-          description: Access token generated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    description: The at_ prefixed access token
-                    example: "at_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  token_type:
-                    type: string
-                    description: Always "api_key" - token is a drop-in replacement for x-api-key header
-                    example: "api_key"
-                  expires_in:
-                    type: integer
-                    description: Token validity in seconds
-                    example: 3600
-        '400':
-          description: Bad request (e.g., trying to create token from access token)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Cannot create access token from access token"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /v1/token/verify:
-    post:
-      tags:
-        - Portfolio Connect
-      summary: Verify Access Token
-      description: |
-        Verify an access token and check if it's still valid.
-        Useful for debugging token issues.
-      operationId: verifyAccessToken
-      security:
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Token verification result
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  valid:
-                    type: boolean
-                    description: Whether the token is valid
-                    example: true
-                  masked_api_key:
-                    type: string
-                    description: Masked API key (only shown if valid)
-                    example: "abc1****ef23"
-                  error:
-                    type: string
-                    description: Error message (only shown if invalid)
-                    example: "Token has expired"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  # ============================================
-  # Agent Auth Endpoints
-  # ============================================
-
-  /v1/agent-auth/token/{token}/approve:
-    post:
-      tags:
-        - Agent Auth
-      summary: Approve Agent Authorization
-      description: |
-        Called by the frontend after the user signs in.
-        
-        Verifies the identity token, creates or looks up the user's API key,
-        and stores it against the token for the agent to poll via `GET /v1/agent-auth/token/{token}`.
-        
-        **This endpoint is called by the browser, not by agents directly.**
-      operationId: agentAuthApprove
-      parameters:
-        - name: token
-          in: path
-          required: true
-          description: The token the agent generated and included in the approval URL. Must be 16-128 characters.
-          schema:
-            type: string
-            minLength: 16
-            maxLength: 128
-            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - id_token
-              properties:
-                id_token:
-                  type: string
-                  description: Identity token obtained after the user signs in on the approval page
-                client_name:
-                  type: string
-                  description: Name of the agent/application (stored in customer metadata for audit)
-                  example: "Claude Code"
-      responses:
-        '200':
-          description: Authorization approved. The API key is now available for the agent to poll.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "approved"
-                  email:
-                    type: string
-                    example: "user@example.com"
-        '400':
-          description: Invalid token length or invalid request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Token must be 16-128 characters"
-        '401':
-          description: Invalid or expired identity token
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Invalid identity token"
-        '403':
-          description: Unsupported sign-in method
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Unsupported sign-in method"
-        '409':
-          description: Token was already approved (only the first approval is accepted)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Token already approved or storage unavailable"
-
-  /v1/agent-auth/token/{token}:
-    get:
-      tags:
-        - Agent Auth
-      summary: Poll for Agent Authorization Result
-      description: |
-        Agent polls this endpoint to check if the user has approved the authorization.
-        
-        Returns `{"status": "pending"}` while waiting for user approval.
-        Returns `{"status": "approved", "api_key": "sk_...", "email": "..."}` once approved.
-        
-        **One-shot delivery:** the API key is returned exactly once. After delivery, the token is deleted
-        and subsequent polls return `{"status": "pending"}`.
-        
-        **Recommended polling interval:** 5 seconds. Token expires after 10 minutes.
-      operationId: agentAuthPoll
-      parameters:
-        - name: token
-          in: path
-          required: true
-          description: The token the agent generated locally and included in the approval URL.
-          schema:
-            type: string
-            minLength: 16
-            maxLength: 128
-            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
-      responses:
-        '200':
-          description: Current authorization status
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - type: object
-                    title: Pending
-                    properties:
-                      status:
-                        type: string
-                        enum: ["pending"]
-                    example:
-                      status: "pending"
-                  - type: object
-                    title: Approved
-                    properties:
-                      status:
-                        type: string
-                        enum: ["approved"]
-                      api_key:
-                        type: string
-                        description: The issued API key (sk_ prefix)
-                      email:
-                        type: string
-                        description: Email of the user who approved
-                    example:
-                      status: "approved"
-                      api_key: "sk_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
-                      email: "user@example.com"
-        '400':
-          description: Invalid token length
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  detail:
-                    type: string
-                    example: "Token must be 16-128 characters"
-
-  # ============================================
-  # Core Endpoints (portfolio-parser server)
-  # ============================================
   /v4/smart/parse:
     post:
       tags:
@@ -876,143 +357,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /v4/cdsl/fetch:
-    post:
-      tags:
-        - CAS Fetch
-      summary: CDSL CAS Fetch - Step 1 (Request OTP)
-      description: |
-        **Step 1 of 2**: Request OTP for CDSL CAS fetch.
-        
-        This endpoint:
-        1. Solves reCAPTCHA automatically (~15-20 seconds)
-        2. Submits login credentials to CDSL portal
-        3. Triggers OTP to user's registered mobile number
-        
-        After user receives OTP, call `/v4/cdsl/fetch/{session_id}/verify` to complete.
-      operationId: cdslFetchRequestOTP
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - pan
-                - bo_id
-                - dob
-              properties:
-                pan:
-                  type: string
-                  description: PAN number
-                  example: "ABCDE1234F"
-                bo_id:
-                  type: string
-                  description: CDSL BO ID (16 digits)
-                  example: "1234567890123456"
-                dob:
-                  type: string
-                  description: Date of birth (YYYY-MM-DD)
-                  example: "1990-01-15"
-      responses:
-        '200':
-          description: OTP sent to registered mobile
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  session_id:
-                    type: string
-                    description: Session ID for verify step
-                    example: "550e8400-e29b-41d4-a716-446655440000"
-                  msg:
-                    type: string
-                    example: "OTP sent to registered mobile"
-        '400':
-          $ref: '#/components/responses/ParseBadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  /v4/cdsl/fetch/{session_id}/verify:
-    post:
-      tags:
-        - CAS Fetch
-      summary: CDSL CAS Fetch - Step 2 (Verify OTP & Get Files)
-      description: |
-        **Step 2 of 2**: Verify OTP and retrieve CDSL CAS files.
-        
-        After successful verification, CAS PDFs are fetched from CDSL portal,
-        uploaded to cloud storage, and returned as direct download URLs.
-      operationId: cdslFetchVerifyOTP
-      security:
-        - ApiKeyAuth: []
-      parameters:
-        - name: session_id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Session ID from Step 1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - otp
-              properties:
-                otp:
-                  type: string
-                  description: OTP received on mobile
-                  example: "123456"
-                num_periods:
-                  type: integer
-                  description: Number of monthly statements to fetch (default 6)
-                  default: 6
-                  example: 6
-      responses:
-        '200':
-          description: CAS files fetched successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  msg:
-                    type: string
-                    example: "Fetched 6 CAS files"
-                  files:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        filename:
-                          type: string
-                          example: "CDSL_CAS_1234567890123456_NOV2025.pdf"
-                        url:
-                          type: string
-                          description: Direct download URL (cloud storage)
-                          example: "https://cdn.casparser.in/cdsl-cas/session-id/CDSL_CAS_1234567890123456_NOV2025.pdf"
-        '400':
-          $ref: '#/components/responses/ParseBadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: Session not found or expired
-        '500':
-          $ref: '#/components/responses/InternalError'
-
-  
   /v4/inbox/connect:
     post:
       tags:
@@ -1749,6 +1093,999 @@ paths:
                 status: "failed"
                 msg: "KYC service timed out. Please try again."
 
+  /v1/kyc/digilocker/account-lookup:
+    post:
+      tags:
+        - KYC
+      summary: Check if a DigiLocker account exists
+      description: |
+        Check whether a mobile number or Aadhaar number is already registered
+        with DigiLocker. This is a pre-consent lookup: it helps you decide
+        whether to start the user in `signin` or `signup` flow.
+
+        Provide exactly one of `aadhaar_number` or `mobile`.
+
+        **Credits:** Free.
+      operationId: digilockerAccountLookup
+      security:
+        - ApiKeyAuth: []
+        - AccessTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                aadhaar_number:
+                  type: string
+                  description: 12-digit Aadhaar number.
+                  example: "123456789012"
+                mobile:
+                  type: string
+                  description: 10-digit Indian mobile number.
+                  example: "9876543210"
+                reference_id:
+                  type: string
+                  description: Optional caller-side request identifier.
+      responses:
+        '200':
+          description: Account lookup result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  registered:
+                    type: boolean
+                    description: Whether the identifier has a DigiLocker account.
+                  digilocker_id:
+                    type: [string, "null"]
+                    description: DigiLocker username if registered, null otherwise.
+                  suggested_user_flow:
+                    type: string
+                    enum: [signin, signup]
+                  reference_id:
+                    type: [string, "null"]
+                  next_step:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                        example: "start_session"
+                      message:
+                        type: string
+                      endpoint:
+                        type: string
+                        example: "POST /v1/kyc/digilocker/session"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                identifier_conflict:
+                  value:
+                    status: "failed"
+                    msg: "Provide only one of aadhaar_number or mobile."
+                    code: "identifier_conflict"
+                identifier_required:
+                  value:
+                    status: "failed"
+                    msg: "Provide either aadhaar_number or mobile."
+                    code: "identifier_required"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/kyc/digilocker/session:
+    post:
+      tags:
+        - KYC
+      summary: Start DigiLocker session
+      description: |
+        Start a DigiLocker session to fetch the investor's government-issued
+        documents (Aadhaar, PAN, etc.) with their consent.
+
+        **How it works:**
+        1. Call this endpoint — you get back an `authorization_url` and a
+           `session_id`. The `session_id` is the single identifier you use
+           for everything else.
+        2. Redirect the investor to `authorization_url` to log in to DigiLocker
+           and grant consent.
+        3. After consent, the investor is redirected back to your `redirect_url`
+           with query parameters appended (see the table below).
+        4. Use the `session_id` (path parameter) on the
+           `POST /v1/kyc/digilocker/result/{session_id}` endpoint to read the
+           consented data — identity, documents, and parsed document content.
+
+        **Redirect parameters appended to your `redirect_url`:**
+
+        | Outcome | Appended query parameters |
+        | --- | --- |
+        | Consent granted | `?success=true&id={session_id}&state={state}&documents=pan+driving_licence&has_verified_data=1` |
+        | Partial consent (e.g. PAN only) | `?success=true&id={session_id}&state={state}&documents=pan` |
+        | Consent denied / failed | `?success=false&id={session_id}&state={state}&error={error}` |
+
+        `documents` lists the documents the investor agreed to share;
+        `has_verified_data=1` appears only when verified identity is available.
+
+        **Credits:** Free. Billing happens when documents/identity are returned.
+      operationId: startDigilockerSession
+      security:
+        - ApiKeyAuth: []
+        - AccessTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - consent
+                - consent_purpose
+                - redirect_url
+              properties:
+                consent:
+                  type: boolean
+                  description: |
+                    Explicit end-user consent. Must be `true` to proceed
+                    (regulatory requirement under DPDP / RBI). Captured for audit.
+                  example: true
+                consent_purpose:
+                  type: string
+                  minLength: 20
+                  description: |
+                    Specific purpose for which consent is taken (min 20 chars).
+                    Stored in the session and returned as a consent receipt.
+                  example: "KYC for loan account opening"
+                redirect_url:
+                  type: string
+                  format: uri
+                  description: Where to redirect the user after consent. Must be a valid http/https URL.
+                  example: "https://yourapp.com/digilocker/callback"
+                state:
+                  type: string
+                  description: Opaque value echoed back to your redirect_url unchanged.
+                  example: "investor_42"
+                documents:
+                  type: array
+                  items:
+                    type: string
+                    enum: [aadhaar, pan, driving_licence, email, mobile]
+                  description: Identities to verify and return in the response.
+                  example: ["aadhaar", "pan"]
+                user_flow:
+                  type: string
+                  enum: [signin, signup]
+                  description: 'Use "signin" for users with an existing DigiLocker account, "signup" for account-on-the-fly.'
+                  example: "signin"
+                prefill_mobile:
+                  type: string
+                  description: Pre-verified mobile to skip the signup OTP step (only applies with user_flow=signup).
+                  example: "9999999999"
+      responses:
+        '200':
+          description: Session started; redirect the user to authorization_url
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  session_id:
+                    type: string
+                    description: |
+                      The single identifier for this verification. Use it as the
+                      path parameter in `POST /v1/kyc/digilocker/result/{session_id}`
+                      to retrieve identity + documents.
+                    example: "3f9a2c1e8b7d4e6fa1c2d3e4f5a6b7c8"
+                  authorization_url:
+                    type: string
+                    description: DigiLocker consent URL to redirect the investor to.
+                  expires_in:
+                    type: integer
+                    description: Seconds the authorization_url is valid for.
+                    example: 600
+        '400':
+          description: |
+            Validation error. `code` indicates which: `consent_required`
+            (consent not true), `consent_purpose_required` (missing/too short),
+            or `redirect_url_invalid`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                consent_required:
+                  value:
+                    status: "failed"
+                    msg: "Explicit user consent is required. Pass consent: true."
+                    code: "consent_required"
+                consent_purpose_required:
+                  value:
+                    status: "failed"
+                    msg: "A specific consent_purpose is required (min 20 characters)."
+                    code: "consent_purpose_required"
+                redirect_url_invalid:
+                  value:
+                    status: "failed"
+                    msg: "Invalid or missing redirect_url. Must be a valid http/https URL."
+                    code: "redirect_url_invalid"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: DigiLocker is temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/kyc/digilocker/result/{session_id}:
+    post:
+      tags:
+        - KYC
+      summary: DigiLocker aggregate (one-call convenience)
+      description: |
+        Return everything available for a DigiLocker session in a single call.
+        Each section is independent: if one is unavailable (e.g. the investor
+        didn't consent to it), it's reported under `errors` and the rest of the
+        response still succeeds.
+
+        - `identity` — verified identity, when requested via `documents` (free).
+        - `documents` — list of the investor's documents (free). Set
+          `include_documents: false` to skip.
+        - `fetched` — for each document in `fetch_documents`, the parsed document data.
+
+        **Credits:** 0.25 per call, regardless of how many documents are
+        fetched or whether identity is returned.
+      operationId: digilockerResult
+      security:
+        - ApiKeyAuth: []
+        - AccessTokenAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The `session_id` returned by `/v1/kyc/digilocker/session`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fetch_documents:
+                  type: array
+                  items:
+                    type: string
+                    enum: [pan, aadhaar, driving_licence]
+                  description: |
+                    Documents to additionally fetch + parse from the locker.
+                    Default: [] (no document fetch, no fetch billing).
+                  example: ["pan", "driving_licence"]
+                include_documents:
+                  type: boolean
+                  default: true
+                  description: Include the issued-documents list.
+      responses:
+        '200':
+          description: Aggregate result (sections present per availability)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  identity:
+                    oneOf:
+                      - $ref: '#/components/schemas/DigilockerVerifiedIdentity'
+                      - type: "null"
+                  consent:
+                    $ref: '#/components/schemas/DigilockerConsent'
+                  consented_documents:
+                    type: array
+                    description: Friendly names of documents the user consented to share.
+                    items:
+                      type: string
+                    example: ["pan", "driving_licence"]
+                  documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DigilockerDocument'
+                  fetched:
+                    type: object
+                    description: |
+                      Parsed documents keyed by the `fetch_documents` value
+                      (pan/aadhaar/driving_licence). Value is null if the document
+                      was requested but unavailable. Each parsed object also
+                      includes a `signature` block.
+                    properties:
+                      pan:
+                        oneOf:
+                          - $ref: '#/components/schemas/DigilockerPan'
+                          - type: "null"
+                      aadhaar:
+                        oneOf:
+                          - $ref: '#/components/schemas/DigilockerAadhaar'
+                          - type: "null"
+                      driving_licence:
+                        oneOf:
+                          - $ref: '#/components/schemas/DigilockerDrivingLicence'
+                          - type: "null"
+                  errors:
+                    type: object
+                    description: Per-section error codes (omitted when there are none).
+                    additionalProperties:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/agent-auth/token/{token}/approve:
+    post:
+      tags:
+        - Agent Auth
+      summary: Approve Agent Authorization
+      description: |
+        Called by the frontend after the user signs in.
+        
+        Verifies the identity token, creates or looks up the user's API key,
+        and stores it against the token for the agent to poll via `GET /v1/agent-auth/token/{token}`.
+        
+        **This endpoint is called by the browser, not by agents directly.**
+      operationId: agentAuthApprove
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token the agent generated and included in the approval URL. Must be 16-128 characters.
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id_token
+              properties:
+                id_token:
+                  type: string
+                  description: Identity token obtained after the user signs in on the approval page
+                client_name:
+                  type: string
+                  description: Name of the agent/application (stored in customer metadata for audit)
+                  example: "Claude Code"
+      responses:
+        '200':
+          description: Authorization approved. The API key is now available for the agent to poll.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "approved"
+                  email:
+                    type: string
+                    example: "user@example.com"
+        '400':
+          description: Invalid token length or invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token must be 16-128 characters"
+        '401':
+          description: Invalid or expired identity token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Invalid identity token"
+        '403':
+          description: Unsupported sign-in method
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Unsupported sign-in method"
+        '409':
+          description: Token was already approved (only the first approval is accepted)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token already approved or storage unavailable"
+
+  /v1/agent-auth/token/{token}:
+    get:
+      tags:
+        - Agent Auth
+      summary: Poll for Agent Authorization Result
+      description: |
+        Agent polls this endpoint to check if the user has approved the authorization.
+        
+        Returns `{"status": "pending"}` while waiting for user approval.
+        Returns `{"status": "approved", "api_key": "sk_...", "email": "..."}` once approved.
+        
+        **One-shot delivery:** the API key is returned exactly once. After delivery, the token is deleted
+        and subsequent polls return `{"status": "pending"}`.
+        
+        **Recommended polling interval:** 5 seconds. Token expires after 10 minutes.
+      operationId: agentAuthPoll
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The token the agent generated locally and included in the approval URL.
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 128
+            example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"
+      responses:
+        '200':
+          description: Current authorization status
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    title: Pending
+                    properties:
+                      status:
+                        type: string
+                        enum: ["pending"]
+                    example:
+                      status: "pending"
+                  - type: object
+                    title: Approved
+                    properties:
+                      status:
+                        type: string
+                        enum: ["approved"]
+                      api_key:
+                        type: string
+                        description: The issued API key (sk_ prefix)
+                      email:
+                        type: string
+                        description: Email of the user who approved
+                    example:
+                      status: "approved"
+                      api_key: "sk_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+                      email: "user@example.com"
+        '400':
+          description: Invalid token length
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Token must be 16-128 characters"
+
+  # ============================================
+  # Core Endpoints (portfolio-parser server)
+  # ============================================
+  /v4/cdsl/fetch:
+    post:
+      tags:
+        - CAS Fetch
+      summary: CDSL CAS Fetch - Step 1 (Request OTP)
+      description: |
+        **Step 1 of 2**: Request OTP for CDSL CAS fetch.
+        
+        This endpoint:
+        1. Solves reCAPTCHA automatically (~15-20 seconds)
+        2. Submits login credentials to CDSL portal
+        3. Triggers OTP to user's registered mobile number
+        
+        After user receives OTP, call `/v4/cdsl/fetch/{session_id}/verify` to complete.
+      operationId: cdslFetchRequestOTP
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pan
+                - bo_id
+                - dob
+              properties:
+                pan:
+                  type: string
+                  description: PAN number
+                  example: "ABCDE1234F"
+                bo_id:
+                  type: string
+                  description: CDSL BO ID (16 digits)
+                  example: "1234567890123456"
+                dob:
+                  type: string
+                  description: Date of birth (YYYY-MM-DD)
+                  example: "1990-01-15"
+      responses:
+        '200':
+          description: OTP sent to registered mobile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  session_id:
+                    type: string
+                    description: Session ID for verify step
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  msg:
+                    type: string
+                    example: "OTP sent to registered mobile"
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v4/cdsl/fetch/{session_id}/verify:
+    post:
+      tags:
+        - CAS Fetch
+      summary: CDSL CAS Fetch - Step 2 (Verify OTP & Get Files)
+      description: |
+        **Step 2 of 2**: Verify OTP and retrieve CDSL CAS files.
+        
+        After successful verification, CAS PDFs are fetched from CDSL portal,
+        uploaded to cloud storage, and returned as direct download URLs.
+      operationId: cdslFetchVerifyOTP
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Session ID from Step 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+              properties:
+                otp:
+                  type: string
+                  description: OTP received on mobile
+                  example: "123456"
+                num_periods:
+                  type: integer
+                  description: Number of monthly statements to fetch (default 6)
+                  default: 6
+                  example: 6
+      responses:
+        '200':
+          description: CAS files fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  msg:
+                    type: string
+                    example: "Fetched 6 CAS files"
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                          example: "CDSL_CAS_1234567890123456_NOV2025.pdf"
+                        url:
+                          type: string
+                          description: Direct download URL (cloud storage)
+                          example: "https://cdn.casparser.in/cdsl-cas/session-id/CDSL_CAS_1234567890123456_NOV2025.pdf"
+        '400':
+          $ref: '#/components/responses/ParseBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Session not found or expired
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  
+  /v1/token:
+    post:
+      tags:
+        - Portfolio Connect
+      summary: Generate Access Token
+      description: |
+        Generate a short-lived access token from your API key.
+        
+        **Use this endpoint from your backend** to create tokens that can be safely passed to frontend/SDK.
+        
+        **Legacy path:** `/v1/access-token` (still supported)
+        
+        Access tokens:
+        - Are prefixed with `at_` for easy identification
+        - Valid for up to 60 minutes
+        - Can be used in place of API keys on all v4 endpoints
+        - Cannot be used to generate other access tokens
+      operationId: generateAccessToken
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiry_minutes:
+                  type: integer
+                  description: Token validity in minutes (max 60)
+                  default: 60
+                  maximum: 60
+                  minimum: 1
+                  example: 60
+      responses:
+        '200':
+          description: Access token generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: The at_ prefixed access token
+                    example: "at_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    description: Always "api_key" - token is a drop-in replacement for x-api-key header
+                    example: "api_key"
+                  expires_in:
+                    type: integer
+                    description: Token validity in seconds
+                    example: 3600
+        '400':
+          description: Bad request (e.g., trying to create token from access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Cannot create access token from access token"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/token/verify:
+    post:
+      tags:
+        - Portfolio Connect
+      summary: Verify Access Token
+      description: |
+        Verify an access token and check if it's still valid.
+        Useful for debugging token issues.
+      operationId: verifyAccessToken
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Token verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    description: Whether the token is valid
+                    example: true
+                  masked_api_key:
+                    type: string
+                    description: Masked API key (only shown if valid)
+                    example: "abc1****ef23"
+                  error:
+                    type: string
+                    description: Error message (only shown if invalid)
+                    example: "Token has expired"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Agent Auth Endpoints
+  # ============================================
+
+  /v1/credits:
+    post:
+      tags:
+        - Authorization
+      summary: Check API Credits
+      description: |
+        Check your remaining API credits and usage for the current billing period.
+        
+        Returns:
+        - Number of API calls used and remaining credits
+        - Credit limit and reset date
+        - List of enabled features for your plan
+        
+        Credits reset at the start of each billing period.
+      operationId: checkCredits
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Credits information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  used:
+                    type: number
+                    description: Number of credits used this billing period
+                    example: 15.0
+                  remaining:
+                    type: [number, "null"]
+                    description: Remaining credits (null if unlimited)
+                    example: 35.0
+                  limit:
+                    type: integer
+                    description: Total credit limit for billing period
+                    example: 50
+                  is_unlimited:
+                    type: boolean
+                    description: Whether the account has unlimited credits
+                    example: false
+                  resets_at:
+                    type: [string, "null"]
+                    format: date-time
+                    description: When credits reset (ISO 8601)
+                    example: "2026-02-15T00:00:00Z"
+                  enabled_features:
+                    type: array
+                    items:
+                      type: string
+                    description: List of API features enabled for your plan
+                    example: ["cams_kfintech_cas_parser", "cdsl_cas_parser", "nsdl_cas_parser"]
+        '400':
+          description: Bad request (e.g., using access token instead of API key)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for credits API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/usage:
+    post:
+      tags:
+        - Authorization
+      summary: Get API Usage Logs
+      description: |
+        Retrieve detailed API usage logs for your account.
+        
+        Returns a list of API calls with timestamps, features used, status codes, and credits consumed.
+        Useful for monitoring usage patterns and debugging.
+        
+        **Legacy path:** `/logs` (still supported)
+      operationId: getUsageLogs
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                  description: Start time filter (ISO 8601). Defaults to 30 days ago.
+                  example: "2026-01-01T00:00:00Z"
+                end_time:
+                  type: string
+                  format: date-time
+                  description: End time filter (ISO 8601). Defaults to now.
+                  example: "2026-01-31T23:59:59Z"
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 500
+                  default: 100
+                  description: Maximum number of logs to return
+      responses:
+        '200':
+          description: Usage logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        request_id:
+                          type: string
+                          description: Unique request identifier
+                          example: "req_2xYz7KpL8mN3Ab"
+                        feature:
+                          type: string
+                          description: API feature used
+                          example: "cdsl_cas_parser"
+                        path:
+                          type: string
+                          description: API endpoint path
+                          example: "/v4/cdsl/parse"
+                        status_code:
+                          type: integer
+                          description: HTTP response status code
+                          example: 200
+                        credits:
+                          type: number
+                          description: Credits consumed for this request
+                          example: 1.0
+                        timestamp:
+                          type: string
+                          format: date-time
+                          description: When the request was made
+                          example: "2026-01-15T14:30:00Z"
+                  count:
+                    type: integer
+                    description: Number of logs returned
+                    example: 25
+        '400':
+          description: Bad request (e.g., using access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for logs API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/usage/summary:
+    post:
+      tags:
+        - Authorization
+      summary: Get Usage Summary
+      description: |
+        Get aggregated usage statistics grouped by feature.
+        
+        Useful for understanding which API features are being used most and tracking usage trends.
+        
+        **Legacy path:** `/logs/summary` (still supported)
+      operationId: getUsageSummary
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                  description: Start time filter (ISO 8601). Defaults to start of current month.
+                end_time:
+                  type: string
+                  format: date-time
+                  description: End time filter (ISO 8601). Defaults to now.
+      responses:
+        '200':
+          description: Usage summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  summary:
+                    type: object
+                    properties:
+                      total_credits:
+                        type: number
+                        description: Total credits consumed in the period
+                        example: 45.5
+                      total_requests:
+                        type: integer
+                        description: Total API requests made in the period
+                        example: 42
+                      by_feature:
+                        type: array
+                        description: Usage breakdown by feature
+                        items:
+                          type: object
+                          properties:
+                            feature:
+                              type: string
+                              description: API feature name
+                              example: "cdsl_cas_parser"
+                            credits:
+                              type: number
+                              description: Credits consumed by this feature
+                              example: 15.0
+                            requests:
+                              type: integer
+                              description: Number of requests for this feature
+                              example: 15
+        '400':
+          description: Bad request (e.g., using access token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Access tokens cannot be used for logs API. Use your API key instead."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Portfolio Connect SDK Endpoints
+  # ============================================
+  # ============================================
+  # Account & Authorization Endpoints
+  # New paths: /v1/credits, /v1/usage, /v1/usage/summary, /v1/token, /v1/token/verify
+  # Legacy paths still supported: /credits, /logs, /logs/summary, /v1/access-token, /v1/verify-token
+  # ============================================
+  
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1882,7 +2219,7 @@ components:
           schema:
             $ref: '#/components/schemas/AuthErrorResponse'
           example:
-            status: "error"
+            status: "failed"
             msg: "Authentication failed: API key is missing. Please provide a valid API key in the x-api-key header."
     Forbidden:
       description: Forbidden. This can happen if the API key is invalid or the quota has been exceeded.
@@ -1891,7 +2228,7 @@ components:
           schema:
             $ref: '#/components/schemas/AuthErrorResponse'
           example:
-            status: "error"
+            status: "failed"
             msg: "Authentication failed: API quota exceeded or invalid API key. Please check your API key or quota limits."
     InternalError:
       description: Internal server error
@@ -1910,7 +2247,8 @@ components:
         status:
           type: string
           description: The status of the error.
-          example: error
+          enum: [failed]
+          example: failed
         msg:
           type: string
           description: A descriptive message explaining the error.
@@ -3111,6 +3449,270 @@ components:
             statuses. Non-null when a fuzzy match or unknown string was encountered —
             preserve this for debugging and to help us expand coverage.
           example: "ON HOLD - New KYC"
+
+    DigilockerAadhaar:
+      type: object
+      description: |
+        e-Aadhaar (Aadhaar Paperless Offline eKYC) data parsed from DigiLocker XML.
+        Any field may be null if not present in the source XML.
+      properties:
+        name:
+          type: [string, "null"]
+          description: Full name as on Aadhaar
+          example: "Anjali Sharma"
+        dob:
+          type: [string, "null"]
+          description: Date of birth (as returned by DigiLocker, typically DD-MM-YYYY)
+          example: "16-05-1990"
+        gender:
+          type: [string, "null"]
+          description: Gender (M, F, or T)
+          example: "F"
+        care_of:
+          type: [string, "null"]
+          description: Care-of / guardian field
+          example: "S/O Rajesh Sharma"
+        address:
+          type: [string, "null"]
+          description: Full address assembled from the Aadhaar address fields
+          example: "12, MG Road, Indiranagar, Bengaluru, Karnataka, 560038, India"
+        photo_base64:
+          type: [string, "null"]
+          description: Base64-encoded photograph from the Aadhaar XML
+        masked_aadhaar:
+          type: [string, "null"]
+          description: Masked Aadhaar number (only last 4 digits visible)
+          example: "XXXXXXXX1234"
+        session_id:
+          type: [string, "null"]
+          description: DigiLocker/UIDAI reference id for this eKYC document
+
+    DigilockerPan:
+      type: object
+      description: |
+        PAN certificate data parsed from DigiLocker XML (returned as `parsed`
+        when `parse=pan`). Any field may be null if absent in the source XML.
+      properties:
+        pan:
+          type: [string, "null"]
+          description: PAN number
+          example: "ABCPD1234E"
+        name:
+          type: [string, "null"]
+          description: PAN holder name
+          example: "RAHUL SHARMA"
+        father_name:
+          type: [string, "null"]
+          description: Father/spouse name (the `swd` field; often empty)
+          example: null
+        dob:
+          type: [string, "null"]
+          description: Date of birth (DD-MM-YYYY as returned)
+          example: "22-03-1995"
+        gender:
+          type: [string, "null"]
+          example: "MALE"
+        status:
+          type: [string, "null"]
+          description: Certificate status (e.g. "A" = Active)
+          example: "A"
+        verified_on:
+          type: [string, "null"]
+          description: Timestamp DigiLocker verified the record
+          example: "31-05-2026 03:55:02"
+        signature:
+          $ref: '#/components/schemas/DigilockerSignature'
+
+    DigilockerDrivingLicence:
+      type: object
+      description: |
+        Driving licence data parsed from DigiLocker XML (returned under
+        `fetched.driving_licence`). Any field may be null if absent in the
+        source XML.
+      properties:
+        dl_number:
+          type: [string, "null"]
+          example: "KA0120190008989"
+        name:
+          type: [string, "null"]
+          example: "Rahul Sharma"
+        father_name:
+          type: [string, "null"]
+          example: "Suresh Sharma"
+        dob:
+          type: [string, "null"]
+          description: Date of birth, normalized to ISO 8601.
+          example: "1995-03-22"
+        gender:
+          type: [string, "null"]
+          example: "M"
+        status:
+          type: [string, "null"]
+          example: "A"
+        issued_at:
+          type: [string, "null"]
+          example: "RTO, Bengaluru"
+        issue_date:
+          type: [string, "null"]
+          format: date
+        valid_from:
+          type: [string, "null"]
+          format: date
+        expiry_date:
+          type: [string, "null"]
+          format: date
+        present_address:
+          type: [string, "null"]
+        permanent_address:
+          type: [string, "null"]
+        categories:
+          type: array
+          description: Vehicle classes the holder is licensed for.
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              abbreviation:
+                type: string
+              description:
+                type: string
+              issue_date:
+                type: string
+                format: date
+        signature:
+          $ref: '#/components/schemas/DigilockerSignature'
+
+    DigilockerSignature:
+      type: object
+      description: |
+        Signature provenance for a fetched document. Reports whether a signed
+        XML block with an X.509 certificate is present, plus the signing
+        certificate's details. Note: this is provenance reporting, not full
+        XML-DSIG cryptographic verification (the trust model is direct-from-source
+        retrieval, consistent with the industry).
+      properties:
+        signature_present:
+          type: boolean
+          example: true
+        certificate:
+          type: [object, "null"]
+          properties:
+            subject:
+              type: string
+              example: "C=IN,O=DIGITAL INDIA CORPORATION,CN=DS DIGITAL INDIA CORPORATION"
+            issuer:
+              type: string
+            valid_from:
+              type: string
+              format: date-time
+            valid_until:
+              type: string
+              format: date-time
+            serial_number:
+              type: string
+
+    DigilockerConsent:
+      type: object
+      description: |
+        Consent receipt captured at session start. Carried through the flow for
+        audit (DPDP / RBI compliance).
+      properties:
+        purpose:
+          type: [string, "null"]
+          description: The consent_purpose provided at /session.
+          example: "KYC for loan account opening"
+        consented_at:
+          type: [string, "null"]
+          format: date-time
+          description: ISO 8601 timestamp (UTC) when consent was captured.
+          example: "2026-05-30T22:37:17+00:00"
+
+    DigilockerVerifiedIdentity:
+      type: object
+      description: |
+        The investor's verified identity. Only fields the investor shared are
+        populated. `verified` contains the authenticated document identifiers
+        (e.g. PAN, Aadhaar number).
+      properties:
+        name:
+          type: [string, "null"]
+          example: "Anjali Sharma"
+        dob:
+          type: [string, "null"]
+          example: "1990-05-16"
+        gender:
+          type: [string, "null"]
+          example: "F"
+        email:
+          type: [string, "null"]
+          example: "anjali@example.com"
+        mobile:
+          type: [string, "null"]
+          example: "98XXXXXX10"
+        digilocker_id:
+          type: [string, "null"]
+          example: "rahul22031995"
+        username:
+          type: [string, "null"]
+          description: DigiLocker preferred username
+          example: "rahul22031995"
+        care_of:
+          type: [string, "null"]
+          example: "S/O Rajesh Sharma"
+        address:
+          type: [string, "null"]
+        verified:
+          type: object
+          description: Authenticated document identifiers (keys present only when verified).
+          properties:
+            pan:
+              type: string
+              example: "ABCDE1234F"
+            aadhaar:
+              type: string
+              description: Usually masked
+              example: "XXXXXXXX1234"
+            driving_licence:
+              type: string
+              example: "KA01-20110012345"
+          additionalProperties: true
+
+    DigilockerDocument:
+      type: object
+      description: Metadata for a single issued document in the user's DigiLocker.
+      properties:
+        name:
+          type: string
+          description: Document name
+          example: "PAN Verification Record"
+        type:
+          type: string
+          example: "file"
+        doctype:
+          type: string
+          description: 5-character DigiLocker document type code
+          example: "PANCR"
+        issuer:
+          type: string
+          example: "Income Tax Department"
+        issuerid:
+          type: string
+          example: "in.gov.pan"
+        uri:
+          type: string
+          description: Unique DigiLocker identifier for the document
+          example: "in.gov.pan-PANCR-xxxxxxxxxxxx"
+        mime:
+          type: array
+          items:
+            type: string
+          example: ["application/pdf", "application/xml"]
+        date:
+          type: [string, "null"]
+          format: date
+          description: Last modified date in DigiLocker, normalized to ISO 8601.
+          example: "2024-09-19"
 
     InboundEmailWebhookPayload:
       type: object
