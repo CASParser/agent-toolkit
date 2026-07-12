@@ -103,6 +103,7 @@
               "guides/portfolio-links",
               "guides/cdsl-fetch",
               "guides/kyc-pan-status",
+              "guides/kyc-digilocker",
               "guides/mcp-server"
             ]
           },

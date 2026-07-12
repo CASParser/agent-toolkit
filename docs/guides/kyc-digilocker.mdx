@@ -1,0 +1,156 @@
+---
+title: KYC DigiLocker
+description: Fetch an investor's PAN, Aadhaar, and driving licence from DigiLocker, with their consent.
+---
+
+Pull an investor's government documents straight from DigiLocker after they sign in and consent. You get their verified identity plus parsed PAN, Aadhaar, and driving licence data.
+
+This is not the same as [KYC PAN Status](/guides/kyc-pan-status). PAN Status is a passive KRA lookup. DigiLocker is an active flow where the investor logs in and shares documents.
+
+## How it works
+
+1. (Optional) Look up whether the investor already has a DigiLocker account.
+2. Start a session. You get a `session_id` and an `authorization_url`.
+3. Redirect the investor to `authorization_url`. They sign in and consent.
+4. DigiLocker sends them back to your `redirect_url`.
+5. Read the result with the `session_id`.
+
+The `session_id` is the only thing you carry between steps.
+
+<Note>
+  Consent is mandatory. You must pass `consent: true` and a `consent_purpose` of at least 20 characters. We store both as a consent receipt.
+</Note>
+
+## 1. Account lookup (optional)
+
+Decide whether to send the investor down a `signin` or `signup` path. Pass one of `mobile` or `aadhaar_number`, not both.
+
+```python
+import requests
+
+r = requests.post(
+    "https://api.casparser.in/v1/kyc/digilocker/account-lookup",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"mobile": "9876543210"},
+    timeout=30,
+)
+r.json()["suggested_user_flow"]  # "signin" or "signup"
+```
+
+Free.
+
+## 2. Start a session
+
+```python
+r = requests.post(
+    "https://api.casparser.in/v1/kyc/digilocker/session",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={
+        "consent": True,
+        "consent_purpose": "KYC for investment account opening",
+        "redirect_url": "https://yourapp.com/digilocker/callback",
+        "documents": ["aadhaar", "pan"],
+    },
+    timeout=30,
+)
+data = r.json()
+# data["session_id"], data["authorization_url"]
+```
+
+Body fields:
+
+- `consent` (required) — must be `true`.
+- `consent_purpose` (required) — min 20 characters.
+- `redirect_url` (required) — where the investor lands after consent.
+- `documents` — any of `aadhaar`, `pan`, `driving_licence`, `email`, `mobile`.
+- `state` — echoed back to you unchanged.
+- `user_flow` — `signin` or `signup`.
+- `prefill_mobile` — pre-verified mobile to skip the signup OTP (with `signup`).
+
+Free.
+
+## 3. Consent redirect
+
+After consent, the investor returns to your `redirect_url` with query params:
+
+- Granted: `?success=true&id={session_id}&documents=pan+aadhaar&has_verified_data=1`
+- Denied: `?success=false&id={session_id}&error={error}`
+
+`id` is the `session_id`. `documents` lists what they agreed to share.
+
+## 4. Read the result
+
+One call returns everything the investor consented to. Missing pieces show up under `errors`; the rest still comes back.
+
+```python
+r = requests.post(
+    f"https://api.casparser.in/v1/kyc/digilocker/result/{session_id}",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"fetch_documents": ["pan"]},
+    timeout=60,
+)
+data = r.json()
+# data["identity"], data["documents"], data["fetched"]["pan"]
+```
+
+Body fields:
+
+- `fetch_documents` — documents to parse: `pan`, `aadhaar`, `driving_licence`. Default none.
+- `include_documents` — include the issued-documents list. Default `true`.
+
+Response:
+
+```json
+{
+  "status": "success",
+  "identity": {
+    "name": "Anjali Sharma",
+    "dob": "1990-05-16",
+    "verified": { "pan": "ABCDE1234F", "aadhaar": "XXXXXXXX1234" }
+  },
+  "consent": { "purpose": "KYC for investment account opening", "consented_at": "..." },
+  "documents": [
+    { "name": "PAN Verification Record", "doctype": "PANCR", "issuer": "Income Tax Department" }
+  ],
+  "fetched": {
+    "pan": { "pan": "ABCPD1234E", "name": "RAHUL SHARMA", "dob": "22-03-1995" }
+  },
+  "errors": {}
+}
+```
+
+Each parsed document also carries a `signature` block with the issuer's certificate details.
+
+Costs 0.25 credits per call, no matter how many documents you fetch.
+
+## Credits
+
+| Call | Credits |
+|------|---------|
+| Account lookup | 0 |
+| Start session | 0 |
+| Result | 0.25 |
+| Failed calls | 0 |
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| `400` | Bad request. Check `code`: `consent_required`, `consent_purpose_required`, `redirect_url_invalid`, `identifier_conflict`, `identifier_required`. |
+| `401` | Bad or missing key. |
+| `503` | DigiLocker is down. Retry with backoff. |
+
+## Frontend note
+
+Don't ship your API key to the browser. Mint a short-lived access token (`at_`) from your backend with `POST /v1/token` and use that.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="KYC PAN Status" icon="id-card" href="/guides/kyc-pan-status">
+    Check a PAN's KRA registration status
+  </Card>
+  <Card title="CAS Parsing" icon="file-pdf" href="/guides/parsing">
+    Parse portfolio statements
+  </Card>
+</CardGroup>

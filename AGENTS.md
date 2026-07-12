@@ -112,6 +112,27 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 - Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the frontend.
 - See [`references/portfolio-connect-sdk.md`](skills/casparser/references/portfolio-connect-sdk.md) for full integration guide.
 
+### KYC PAN Status
+- `POST /v1/kyc/pan/status` — check KYC registration status for a PAN across all five SEBI-registered KRAs (CVL, NDML, CAMS, Karvy, KFin).
+- Returns normalized status (`validated`, `registered`, `under_process`, `on_hold`, `rejected`, `legacy`, `not_available`, `unknown`) plus per-KRA breakdown.
+- Use `kyc_compliant: true/false` as the primary onboarding gate signal.
+- When `kyc_status` is `on_hold`, check `remarks` on the active KRA object for the reason.
+- Set timeout to **90s** — the upstream portal can be slow.
+- **0.5 credits** per successful lookup. Failed lookups are free.
+
+### KYC DigiLocker
+- Consent-based flow to fetch an investor's government-issued documents (Aadhaar, PAN, driving licence) directly from DigiLocker. **Separate from KYC PAN Status** — both sit under the KYC/Identity offering but are independent features.
+- This is a **multi-step, consent-driven flow** (do not try to combine steps):
+  1. `POST /v1/kyc/digilocker/account-lookup` *(optional, free)* — pre-consent check whether a `mobile` or `aadhaar_number` is already registered with DigiLocker. Use `suggested_user_flow` to decide `signin` vs `signup`. Provide **exactly one** of `aadhaar_number` or `mobile`.
+  2. `POST /v1/kyc/digilocker/session` *(free)* — start a session. Returns `authorization_url` + `session_id`. Redirect the investor to `authorization_url` to log in and grant consent. Requires explicit `consent: true` and a `consent_purpose` (min 20 chars) captured for DPDP/RBI audit.
+  3. Investor consents on DigiLocker → redirected back to your `redirect_url` with query params (`success`, `id`=session_id, `state`, `documents`, `has_verified_data`).
+  4. `POST /v1/kyc/digilocker/result/{session_id}` — one-call aggregate: `identity`, issued `documents` list, and parsed docs via `fetch_documents` (pan/aadhaar/driving_licence). Each section is independent — unavailable sections are reported under `errors` without failing the response.
+- `session_id` is the single identifier used across the flow.
+- Supported document types: `aadhaar`, `pan`, `driving_licence`, `email`, `mobile`.
+- Parsed documents include a `signature` block with the issuer's certificate details.
+- **Never hardcode; never expose raw API keys to the frontend.** Use access tokens (`at_`) for client-facing calls.
+- **Credits:** account-lookup and session are **free**; `result` is **0.25 credits per call** regardless of how many documents are fetched. Failed operations are free.
+
 ### PDF Requirements
 - Only **original, digitally-generated PDFs** are supported. No scanned/photographed PDFs (no OCR).
 - **Tampered or modified PDFs are rejected** — the API has built-in fraud prevention for credit underwriting use-cases.
@@ -130,7 +151,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 
 ### Error Handling
 - Success: `{"status": "success", ...}`
-- Failure: `{"status": "failed", "msg": "..."}` or `{"status": "error", "msg": "..."}`
+- Failure: `{"status": "failed", "msg": "..."}` for API errors, `{"status": "error", "msg": "..."}` for authentication errors
 - Common errors: invalid PDF, wrong password, quota exceeded, invalid API key.
 - All responses include an `X-Request-ID` header (`req_*` format) — use it for support requests.
 
@@ -141,6 +162,8 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   |---------|---------|
   | CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | **1.0** |
   | Contract Note Parse | **0.5** |
+  | KYC PAN Status | **0.5** |
+  | KYC DigiLocker (result) | **0.25** |
   | CDSL OTP Fetch | **0.5** |
   | KFintech CAS Generator | **0.5** |
   | Gmail Inbox Pull | **0.2** |
@@ -160,6 +183,8 @@ Always check [`skills/casparser/SKILL.md`](skills/casparser/SKILL.md) for existi
 - KFintech mailback generation
 - Gmail inbox import
 - Inbound email (email forwarding)
+- KYC PAN status check
+- KYC DigiLocker document fetch
 - Credits and usage monitoring
 
 ## MCP Server
