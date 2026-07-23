@@ -118,7 +118,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 - Use `kyc_compliant: true/false` as the primary onboarding gate signal.
 - When `kyc_status` is `on_hold`, check `remarks` on the active KRA object for the reason.
 - Set timeout to **90s** — the upstream portal can be slow.
-- **0.5 credits** per successful lookup. Failed lookups are free.
+- **0.25 credits** per successful lookup. Failed lookups are free.
 
 ### KYC DigiLocker
 - Consent-based flow to fetch an investor's government-issued documents (Aadhaar, PAN, driving licence) directly from DigiLocker. **Separate from KYC PAN Status** — both sit under the KYC/Identity offering but are independent features.
@@ -162,7 +162,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   |---------|---------|
   | CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | **1.0** |
   | Contract Note Parse | **0.5** |
-  | KYC PAN Status | **0.5** |
+  | KYC PAN Status | **0.25** |
   | KYC DigiLocker (result) | **0.25** |
   | CDSL OTP Fetch | **0.5** |
   | KFintech CAS Generator | **0.5** |
