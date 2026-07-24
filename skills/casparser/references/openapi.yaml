@@ -942,7 +942,7 @@ paths:
 
         **Note:** This endpoint may take up to 60 seconds. Set your client timeout accordingly.
 
-        **Credits:** 0.5 per successful lookup. Failed lookups are not billed.
+        **Credits:** 0.25 per successful lookup. Failed lookups are not billed.
       operationId: checkKycPanStatus
       security:
         - ApiKeyAuth: []
