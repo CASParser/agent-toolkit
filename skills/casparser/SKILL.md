@@ -43,8 +43,8 @@ A **Consolidated Account Statement (CAS)** is a single document that shows all o
 CAS PDFs are always password-protected. The password format varies:
 - **CAMS**: PAN number (plain)
 - **KFintech**: User-defined password (min 8 chars, set during CAS generation)
-- **CDSL**: Encrypted PAN (format set by the user during registration)
-- **NSDL**: Encrypted PAN (format set by the user during registration)
+- **CDSL**: PAN number (plain)
+- **NSDL**: PAN number (plain)
 
 The caller passes the password as-is; the API uses it to unlock the PDF.
 

@@ -45,7 +45,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 ### Parsing CAS PDFs
 - **Default to `/v4/smart/parse`** — it auto-detects CAS type (CDSL, NSDL, or CAMS/KFintech) and returns a unified response format.
 - Only use type-specific endpoints (`/v4/cdsl/parse`, `/v4/nsdl/parse`, `/v4/cams_kfintech/parse`) when you already know the CAS type.
-- CAS PDFs are password-protected. Password format varies by provider: CDSL/NSDL use encrypted PAN, CAMS uses plain PAN, KFintech uses a user-defined password set during generation.
+- CAS PDFs are password-protected. Password format varies by provider: CDSL/NSDL/CAMS use PAN number, KFintech uses a user-defined password set during generation.
 - Accept PDFs via file upload (`multipart/form-data`) or URL (`pdf_url` in JSON body).
 
 ### Parsing Contract Notes
