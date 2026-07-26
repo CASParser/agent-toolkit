@@ -20,7 +20,7 @@ flowchart LR
 | **CDSL** | eCAS from www.cdslindia.com/cas/logincas.aspx | Encrypted PAN | All holdings (CDSL + NSDL) |
 | **NSDL** | eCAS from nsdlcas.nsdl.com/ecas/ecas.php | Encrypted PAN | All holdings (NSDL + CDSL) |
 | **CAMS** | CAS from camsonline.com | PAN number | Mutual funds only |
-| **KFintech** | CAS from kfintech.com | PAN number | Mutual funds only |
+| **KFintech** | CAS from kfintech.com | User-defined password | Mutual funds only |
 
 <Tip>
   Use `/v4/smart/parse` — it auto-detects the CAS type and applies the correct parser.
@@ -190,7 +190,7 @@ CAS Parser extracts **9 asset classes** from your CAS:
 | CDSL eCAS | Encrypted PAN | `AXXXX1234X` (varies) |
 | NSDL eCAS | Encrypted PAN | `AXXXX1234X` (varies) |
 | CAMS CAS | Plain PAN | `ABCDE1234F` |
-| KFintech CAS | Plain PAN | `ABCDE1234F` |
+| KFintech CAS | User-defined password | `Min 8 chars (1 upper, 1 lower, 1 number, 1 special)` |
 
 <Warning>
   For CDSL and NSDL eCAS, the password is an encrypted version of the PAN. It varies by statement. If parsing fails, check the email that delivered the CAS for the correct password.

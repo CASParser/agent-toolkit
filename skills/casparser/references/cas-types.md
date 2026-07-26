@@ -61,7 +61,9 @@ Indian investors receive Consolidated Account Statements (CAS) from three differ
 - Monthly email from `donotreply@camsonline.com` (CAMS) or `samfS@kfintech.com` (KFintech)
 - On-demand via KFintech mailback (automated via KFintech Generate API)
 
-**Password format:** Typically first 4 chars of PAN + DOB in DDMMYYYY format
+**Password format:**
+- **CAMS CAS:** PAN number (plain)
+- **KFintech CAS:** User-defined password (min 8 chars with uppercase, lowercase, number, and special character, set during generation)
 
 **Unique identifiers:**
 - **Folio Number**: Unique per AMC per investor
