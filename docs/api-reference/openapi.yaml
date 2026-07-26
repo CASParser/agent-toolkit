@@ -305,7 +305,6 @@ paths:
         mutual funds in India.
 
         This is an async operation - the investor receives the CAS via email within a few minutes.
-        For instant CAS retrieval, use CDSL Fetch (`/v4/cdsl/fetch`).
       operationId: generateCas
       security:
         - ApiKeyAuth: []
