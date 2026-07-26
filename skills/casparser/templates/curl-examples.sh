@@ -89,9 +89,9 @@ curl -X POST "$API_URL/v4/cdsl/fetch/SESSION_ID_HERE/verify" \
   }'
 
 # ============================================================
-# 7. KFintech CAS Generator (email mailback)
+# 7. CAS Generator (email mailback — KFintech + CAMS)
 # ============================================================
-curl -X POST "$API_URL/v4/kfintech/generate" \
+curl -X POST "$API_URL/v4/generate" \
   -H "x-api-key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

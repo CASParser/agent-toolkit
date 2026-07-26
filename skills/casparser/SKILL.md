@@ -388,7 +388,7 @@ The MCP server is auto-generated from the OpenAPI spec. Each tool maps to an API
 | `parseContractNote` | `POST /v4/contract_note/parse` | Parse broker contract notes | `pdf_file` or `pdf_url`, `password` |
 | `cdslFetchRequestOTP` | `POST /v4/cdsl/fetch` | CDSL fetch Step 1 — request OTP | `pan`, `bo_id`, `dob` |
 | `cdslFetchVerifyOTP` | `POST /v4/cdsl/fetch/{session_id}/verify` | CDSL fetch Step 2 — verify OTP | `session_id`, `otp`, `num_periods` |
-| `kfintechGenerate` | `POST /v4/kfintech/generate` | Trigger KFintech CAS mailback | `email`, `from_date`, `to_date`, `password` |
+| `generateCas` | `POST /v4/generate` | Trigger CAS mailback (KFintech + CAMS) | `email`, `from_date`, `to_date`, `password` |
 | `inboxConnect` | `POST /v4/inbox/connect` | Start Gmail OAuth flow | `redirect_uri`, `state` |
 | `inboxStatus` | `GET /v4/inbox/status` | Check inbox connection status | `x-inbox-token` header |
 | `inboxCasList` | `GET /v4/inbox/cas` | List CAS files from inbox | `x-inbox-token` header, optional filters |

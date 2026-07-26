@@ -7,7 +7,7 @@ description: Request mutual fund CAS statements programmatically. Get 50+ years 
 
 CAS Generator triggers a mutual fund CAS statement to be emailed to your user — no manual portal visits needed.
 
-**Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership that provides data from both RTAs (Registrar and Transfer Agents), so this endpoint retrieves mutual fund data from both KFintech and CAMS, covering all mutual funds in India.
+**Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs** (Registrar and Transfer Agents), covering all mutual funds in India.
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ flowchart LR
 - Filling gaps in transaction history
 
 <Note>
-  KFintech emails the CAS to the user's registered email within a few minutes. The CAS is not returned in the API response.
+  The CAS is emailed to the user's registered email within a few minutes. The CAS is not returned in the API response.
 </Note>
 
 ## Request a CAS statement
@@ -31,7 +31,7 @@ flowchart LR
 import requests
 
 response = requests.post(
-    "https://api.casparser.in/v4/kfintech/generate",
+    "https://api.casparser.in/v4/generate",
     headers={"x-api-key": "YOUR_API_KEY"},
     json={
         "email": "investor@example.com",
@@ -49,7 +49,7 @@ data = response.json()
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `email` | Yes | User's email registered with KFintech |
+| `email` | Yes | User's email registered with their RTA (KFintech/CAMS) |
 | `pan_no` | No | User's PAN number (optional) |
 | `from_date` | Yes | Start date (YYYY-MM-DD) |
 | `to_date` | Yes | End date (YYYY-MM-DD) |
@@ -64,7 +64,7 @@ Combine CAS Generator with Gmail Inbox Import for a seamless flow:
 ```python
 # 1. Request CAS generation
 requests.post(
-    "https://api.casparser.in/v4/kfintech/generate",
+    "https://api.casparser.in/v4/generate",
     headers={"x-api-key": API_KEY},
     json={
         "email": "user@gmail.com",
@@ -108,7 +108,7 @@ const requestCAS = async () => {
 | Step | Duration |
 |------|----------|
 | API request | < 1 second |
-| KFintech processing | 1-2 minutes |
+| RTA processing | 1-2 minutes |
 | Email delivery | Depends on email provider |
 
 ## Date range options

@@ -11,7 +11,7 @@ CAS Parser uses a credit-based billing system. Each API call consumes credits ba
 | CAS Parse (smart, CDSL, NSDL, CAMS/KFintech) | **1.0** | `POST /v4/smart/parse` |
 | Contract Note Parse | **0.5** | `POST /v4/contract_note/parse` |
 | CDSL OTP Fetch | **0.5** | `POST /v4/cdsl/fetch` |
-| KFintech CAS Generator | **0.5** | `POST /v4/kfintech/generate` |
+| CAS Generator (KFintech + CAMS) | **0.5** | `POST /v4/generate` |
 | Gmail Inbox Pull | **0.2** | `POST /v4/inbox/cas` |
 | Inbound Email | **0.2** | Per validated email received at `ie_xxx@import.casparser.in`, regardless of whether `callback_url` was set. Creation, listing, and polling are free. |
 | Portfolio Links | **0.2** | Portal (no API endpoint) |
