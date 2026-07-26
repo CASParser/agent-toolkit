@@ -166,7 +166,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   | KYC PAN Status | **0.25** |
   | KYC DigiLocker (result) | **0.25** |
   | CDSL OTP Fetch | **0.5** |
-  | KFintech CAS Generator | **0.5** |
+  | CAS Generator (KFintech + CAMS) | **0.5** |
   | Gmail Inbox Pull | **0.2** |
   | Inbound Email | **0.2** |
   | Portfolio Links | **0.2** |

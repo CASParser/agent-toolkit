@@ -1,7 +1,9 @@
 """
-CAS Parser — KFintech CAS Generator (Python)
+CAS Parser — CAS Generator (Python)
 
-Triggers a CAS statement to be emailed to the investor via KFintech mailback.
+Triggers a CAS statement to be emailed to the investor via KFintech/CAMS mailback.
+KFintech and CAMS have a mutual partnership for data sharing and consolidation,
+so this retrieves mutual fund data from both RTAs.
 This is an async operation — the PDF is sent to the investor's email, not returned.
 
 For instant CAS retrieval, use CDSL Fetch instead (see python-cdsl-fetch.py).
