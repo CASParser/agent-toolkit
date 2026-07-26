@@ -41,10 +41,10 @@ flowchart LR
         A1[PDF Upload]
         A2[Gmail Import]
         A3[CDSL OTP]
-        A4[KFintech Gen]
+        A4[MF CAS Generator]
     end
     
-    subgraph "CAS Parser"
+    subgraph CASParser["CAS Parser"]
         B1[CDSL Parser]
         B2[NSDL Parser]
         B3[CAMS Parser]
@@ -58,8 +58,8 @@ flowchart LR
         C4[NPS/Insurance]
     end
     
-    Input --> CAS Parser
-    CAS Parser --> Output
+    Input --> CASParser
+    CASParser --> Output
     Output --> D[Unified JSON]
 ```
 

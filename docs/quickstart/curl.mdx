@@ -94,7 +94,7 @@ echo "$body" | jq '.summary.total_value'
 
 | Status | Error | Solution |
 |--------|-------|----------|
-| 400 | Invalid password | Check PAN format (encrypted PAN for CDSL/NSDL) |
+| 400 | Invalid password | Check PAN format (PAN for CDSL/NSDL/CAMS) |
 | 401 | Invalid API key | Verify your API key at app.casparser.in |
 | 402 | Insufficient credits | Upgrade plan or wait for reset |
 | 422 | Invalid PDF | Ensure PDF is not scanned/tampered |

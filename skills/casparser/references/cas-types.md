@@ -18,10 +18,10 @@ Indian investors receive Consolidated Account Statements (CAS) from three differ
 - Monthly email from `eCAS@cdslstatement.com`
 - On-demand via CDSL portal (automated via CDSL Fetch API)
 
-**Password format:** Encrypted PAN (format set during registration)
+**Password format:** PAN number (plain)
 
 **Unique identifiers:**
-- **BO ID** (Beneficiary Owner ID): 16-digit number
+- **BOID** (Beneficiary Owner ID): 16-digit number
 - **DP ID** + **Client ID**: Together identify a demat account
 
 **API endpoints:**
@@ -41,7 +41,7 @@ Indian investors receive Consolidated Account Statements (CAS) from three differ
 **How investors get it:**
 - Monthly email from `NSDL-CAS@nsdl.co.in`
 
-**Password format:** Encrypted PAN (format set during registration)
+**Password format:** PAN number (plain)
 
 **Unique identifiers:**
 - **DP ID** + **Client ID**: Identify a demat account
@@ -61,7 +61,9 @@ Indian investors receive Consolidated Account Statements (CAS) from three differ
 - Monthly email from `donotreply@camsonline.com` (CAMS) or `samfS@kfintech.com` (KFintech)
 - On-demand via KFintech mailback (automated via KFintech Generate API)
 
-**Password format:** Typically first 4 chars of PAN + DOB in DDMMYYYY format
+**Password format:**
+- **CAMS CAS:** PAN number (plain)
+- **KFintech CAS:** User-defined password (min 8 chars with uppercase, lowercase, number, and special character, set during generation)
 
 **Unique identifiers:**
 - **Folio Number**: Unique per AMC per investor
