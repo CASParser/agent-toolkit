@@ -5,6 +5,8 @@ Triggers a CAS statement to be emailed to the investor via KFintech/CAMS mailbac
 KFintech and CAMS have a mutual partnership for data sharing and consolidation,
 so this retrieves mutual fund data from both RTAs.
 This is an async operation — the PDF is sent to the investor's email, not returned.
+By default, a Detailed CAS is generated (complete transaction history). The parsing
+layer supports all statement types, but generation always requests the Detailed variant.
 
 Requirements:
     pip install requests

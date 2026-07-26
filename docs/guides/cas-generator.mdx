@@ -9,6 +9,8 @@ CAS Generator triggers a mutual fund CAS statement to be emailed to your user â€
 
 **Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs** (Registrar and Transfer Agents), covering all mutual funds in India.
 
+**Statement type:** By default, a **Detailed CAS** is generated, which includes the complete transaction history. The parsing layer supports all statement types (Detailed, Summary, etc.), but generation always requests the Detailed variant for maximum data coverage.
+
 ```mermaid
 flowchart LR
     A[Your App] --> B[CAS Parser<br/>Generator]

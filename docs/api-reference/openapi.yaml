@@ -305,6 +305,10 @@ paths:
         mutual funds in India.
 
         This is an async operation - the investor receives the CAS via email within a few minutes.
+
+        By default, a **Detailed CAS** is generated, which includes the complete transaction history.
+        The parsing layer supports all statement types (Detailed, Summary, etc.), but generation
+        always requests the Detailed variant for maximum data coverage.
       operationId: generateCas
       security:
         - ApiKeyAuth: []
