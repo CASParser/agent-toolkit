@@ -59,8 +59,9 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   2. `POST /v4/cdsl/fetch/{session_id}/verify` — Submit OTP, get download URLs.
 - The user receives the OTP on their registered mobile number.
 
-### KFintech CAS Generator
-- `POST /v4/kfintech/generate` triggers an **async email mailback** — the CAS PDF is sent to the investor's email, not returned in the response.
+### CAS Generator
+- `POST /v4/generate` triggers an **async email mailback** — the CAS PDF is sent to the investor's email, not returned in the response.
+- KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs**, covering all mutual funds in India.
 - This is not an instant operation. For instant CAS retrieval, use CDSL Fetch.
 
 ### Email Import (Gmail OAuth)

@@ -69,7 +69,7 @@ Indian investors receive Consolidated Account Statements (CAS) from three differ
 
 **API endpoints:**
 - Parse: `POST /v4/cams_kfintech/parse` or `POST /v4/smart/parse`
-- Generate: `POST /v4/kfintech/generate`
+- Generate: `POST /v4/generate`
 
 ## Which Endpoint to Use?
 

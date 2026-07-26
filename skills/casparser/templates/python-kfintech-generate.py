@@ -49,7 +49,7 @@ def generate_kfintech_cas(
         payload["pan_no"] = pan_no
 
     response = requests.post(
-        f"{BASE_URL}/v4/kfintech/generate",
+        f"{BASE_URL}/v4/generate",
         headers=HEADERS,
         json=payload,
         timeout=30,

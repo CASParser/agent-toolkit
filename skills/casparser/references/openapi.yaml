@@ -292,17 +292,21 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /v4/kfintech/generate:
+  /v4/generate:
     post:
       tags:
         - CAS Generator
-      summary: KFintech CAS Generator (Email Mailback)
+      summary: CAS Generator (Email Mailback)
       description: |
-        Generate CAS via KFintech mailback. The CAS PDF will be sent to the investor's email.
-        
+        Generate a mutual fund CAS statement via email mailback. The CAS PDF will be sent to the investor's email.
+
+        KFintech and CAMS have a mutual partnership for data sharing and consolidation,
+        so this endpoint retrieves mutual fund data from **both RTAs**, covering all
+        mutual funds in India.
+
         This is an async operation - the investor receives the CAS via email within a few minutes.
         For instant CAS retrieval, use CDSL Fetch (`/v4/cdsl/fetch`).
-      operationId: kfintechGenerate
+      operationId: generateCas
       security:
         - ApiKeyAuth: []
       requestBody:
