@@ -62,7 +62,8 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 ### CAS Generator
 - `POST /v4/generate` triggers an **async email mailback** — the CAS PDF is sent to the investor's email, not returned in the response.
 - KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs**, covering all mutual funds in India.
-- This is not an instant operation. For instant CAS retrieval, use CDSL Fetch.
+- This is not an instant operation.
+- By default, a **Detailed CAS** is generated (complete transaction history). The parsing layer supports all statement types, but generation always requests the Detailed variant.
 
 ### Email Import (Gmail OAuth)
 - This is a **multi-step OAuth flow**:
