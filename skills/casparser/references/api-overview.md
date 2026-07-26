@@ -142,7 +142,7 @@ Check your current quota with `POST /v1/credits`.
 | `/v4/contract_note/parse` | POST | Core | Parse broker contract notes |
 | `/v4/cdsl/fetch` | POST | Core | CDSL Fetch — Step 1 (Request OTP) |
 | `/v4/cdsl/fetch/{id}/verify` | POST | Core | CDSL Fetch — Step 2 (Verify OTP) |
-| `/v4/kfintech/generate` | POST | Core | KFintech CAS mailback |
+| `/v4/generate` | POST | Core | CAS Generator (KFintech + CAMS mailback) |
 | `/v4/inbox/connect` | POST | Core | Email Import — Initiate OAuth |
 | `/v4/inbox/status` | POST | Core | Email Import — Check status |
 | `/v4/inbox/cas` | POST | Core | Email Import — List CAS files |
