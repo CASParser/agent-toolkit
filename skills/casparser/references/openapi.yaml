@@ -2756,6 +2756,9 @@ components:
             amfi:
               type: string
               description: AMFI code for the scheme (CAMS/KFintech)
+            is_demat:
+              type: [boolean, "null"]
+              description: Whether the scheme is held in demat form (CAMS/KFintech). true = Demat, false = Non-Demat, null = not specified.
             open_units:
               type: [number, "null"]
               format: float
