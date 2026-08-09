@@ -64,13 +64,21 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 - KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs**, covering all mutual funds in India.
 - This is not an instant operation.
 - By default, a **Detailed CAS** is generated (complete transaction history). The parsing layer supports all statement types, but generation always requests the Detailed variant.
+- `cas_authority` selects which RTA portal drives the mailback (defaults to `kfintech`):
+  - `kfintech` — GA. Retrieves mutual fund data from both RTAs via the KFintech mailback service.
+  - `cams` — **Beta**. Drives the mailback through the CAMS portal directly. Use this when the investor's mutual funds are serviced primarily by CAMS.
 
-### Email Import (Gmail OAuth)
+### Email Import (OAuth)
 - This is a **multi-step OAuth flow**:
   1. `POST /v4/inbox/connect` → get `oauth_url`, redirect user to it.
   2. User authorizes → redirected back with `inbox_token`.
   3. `POST /v4/inbox/cas` with `x-inbox-token` header → list CAS files from inbox.
   4. Download URLs expire in 24 hours.
+- Supports three mail providers via the `provider` parameter on `/v4/inbox/connect` (defaults to `gmail`):
+  - `gmail` — `@gmail.com` and Google Workspace domains.
+  - `outlook` — personal Microsoft accounts (`@outlook.com`, `@hotmail.com`, `@live.com`, `@msn.com`, localised variants, and custom domains registered as personal Microsoft accounts).
+  - `zoho` — Zoho Mail accounts, including custom domains hosted on Zoho.
+  - The resolved `provider` is returned in the connect response. `POST /v4/inbox/status` also reports the connected `provider`.
 - Read-only access — the API cannot send emails.
 - User can revoke via `POST /v4/inbox/disconnect`.
 
@@ -108,7 +116,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 
 ### Portfolio Connect SDK (Recommended for Frontend)
 - **For web/frontend apps, start here.** The `@cas-parser/connect` npm package provides a drop-in modal widget.
-- The widget handles file upload, password entry, Gmail inbox import, and CDSL OTP fetch — all in a single UI.
+- The widget handles file upload, password entry, email inbox import (Gmail, Outlook, Zoho), and CDSL OTP fetch — all in a single UI.
 - Works with React, Next.js, Vue, Angular, or vanilla HTML/JS (via UMD bundle).
 - Install: `npm install @cas-parser/connect`
 - Always generate an `accessToken` (`at_` prefix) from your backend via `POST /v1/token`. Never expose raw API keys to the frontend.
@@ -168,7 +176,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   | KYC DigiLocker (result) | **0.25** |
   | CDSL OTP Fetch | **0.5** |
   | CAS Generator (KFintech + CAMS) | **0.5** |
-  | Gmail Inbox Pull | **0.2** |
+  | Email Inbox Pull (Gmail, Outlook, Zoho) | **0.2** |
   | Inbound Email | **0.2** |
   | Portfolio Links | **0.2** |
   | Failed operations | **0** |
@@ -183,7 +191,7 @@ Always check [`skills/casparser/SKILL.md`](skills/casparser/SKILL.md) for existi
 - Parsing CAS PDFs — Python, Node.js, curl (for backend/server-side)
 - CDSL OTP fetch flow
 - KFintech mailback generation
-- Gmail inbox import
+- Email inbox import (Gmail, Outlook, Zoho)
 - Inbound email (email forwarding)
 - KYC PAN status check
 - KYC DigiLocker document fetch

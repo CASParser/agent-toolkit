@@ -80,16 +80,16 @@ Enterprise plans support IP whitelisting. Contact support to configure.
 | **SOC 2** | Planned |
 | **ISO 27001** | Planned |
 
-## Gmail Inbox Security
+## Email Inbox Security
 
-For Gmail import:
+For email inbox import (Gmail, Outlook, Zoho):
 
 | Feature | Details |
 |---------|---------|
 | **Scope** | Read-only (cannot send emails) |
-| **OAuth** | Standard Google OAuth 2.0 |
+| **OAuth** | Standard OAuth 2.0 via the provider (Google, Microsoft, Zoho) |
 | **Token Storage** | Encrypted server-side |
-| **Revocation** | User can revoke via `/v4/inbox/disconnect` |
+| **Revocation** | User can revoke via `/v4/inbox/disconnect` or their provider's account settings |
 
 ## Reporting Vulnerabilities
 

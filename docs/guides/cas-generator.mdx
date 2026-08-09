@@ -56,12 +56,17 @@ data = response.json()
 | `from_date` | Yes | Start date (YYYY-MM-DD) |
 | `to_date` | Yes | End date (YYYY-MM-DD) |
 | `password` | Yes | Password for the PDF |
+| `cas_authority` | No | Which RTA portal drives the mailback. Defaults to `kfintech`. `cams` is **Beta** — use it when the investor's mutual funds are serviced primarily by CAMS. |
+
+<Note>
+  `cas_authority: "cams"` is in **Beta**. The default (`kfintech`) is GA and already retrieves mutual fund data from both RTAs via the KFintech–CAMS data-sharing partnership. Only switch to `cams` when you specifically need the statement sourced from the CAMS portal.
+</Note>
 
 ## Integration patterns
 
-### Pattern 1: Generate + Gmail Import
+### Pattern 1: Generate + Email Import
 
-Combine CAS Generator with Gmail Inbox Import for a seamless flow:
+Combine CAS Generator with Email Inbox Import for a seamless flow:
 
 ```python
 # 1. Request CAS generation
@@ -79,7 +84,7 @@ requests.post(
 # 2. Wait for email (1-2 minutes)
 time.sleep(120)
 
-# 3. Import from Gmail
+# 3. Import from inbox (Gmail/Outlook/Zoho)
 response = requests.post(
     "https://api.casparser.in/v4/inbox/cas",
     headers={

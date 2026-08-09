@@ -3,7 +3,7 @@ name: casparser
 description: >
   CAS Parser is an API platform for parsing Indian financial portfolio documents (CAS PDFs from CDSL, NSDL, CAMS/KFintech
   and contract notes from brokers like Zerodha, Groww, Upstox, ICICI) into structured JSON. Use when the user needs to
-  integrate portfolio tracking, parse CAS statements, import holdings from Gmail, fetch CAS via CDSL OTP, collect CAS
+  integrate portfolio tracking, parse CAS statements, import holdings from email (Gmail, Outlook, Zoho), fetch CAS via CDSL OTP, collect CAS
   via branded Portfolio Links, or add a Portfolio Connect widget to their web app. Includes REST API patterns, a drop-in
   frontend SDK, and an MCP server with 17 live API tools.
 ---
@@ -195,7 +195,7 @@ CAS Parser extracts **9 asset classes** from portfolio documents:
 ```
 Are you building a frontend/web app?
 ├── Yes → Use Portfolio Connect SDK (Pattern 1) — recommended
-│         Handles file upload, password, Gmail import, CDSL fetch in one widget.
+│         Handles file upload, password, email inbox import (Gmail/Outlook/Zoho), CDSL fetch in one widget.
 │         npm install @cas-parser/connect
 ├── No-code CAS collection from clients?
 │   └── Yes → Portfolio Links (Pattern 9)
@@ -205,8 +205,8 @@ Are you building a frontend/web app?
     │   POST /v4/smart/parse with file upload or URL
     ├── User can authenticate via OTP → CDSL Fetch (Pattern 3)
     │   2-step OTP flow, instant download
-    ├── User connects Gmail → Email Import (Pattern 4)
-    │   OAuth flow, search inbox for CAS files
+    ├── User connects email → Email Import (Pattern 4)
+    │   OAuth flow (Gmail/Outlook/Zoho), search inbox for CAS files
     ├── User forwards email → Inbound Email (Pattern 5)
     │   Create email address, user forwards CAS, webhook delivers
     └── Need fresh MF statement → KFintech Mailback (Pattern 6)
@@ -219,7 +219,7 @@ Are you building a frontend/web app?
 
 The fastest way to add CAS import to any web app. The `@cas-parser/connect` npm package provides a drop-in modal widget that handles:
 - **File upload** with drag-and-drop and password entry
-- **Gmail inbox import** via OAuth
+- **Email inbox import** via OAuth (Gmail, Outlook, Zoho)
 - **CDSL fetch** via OTP authentication
 - **All CAS types** (CDSL, NSDL, CAMS/KFintech) in one flow
 
@@ -286,9 +286,9 @@ For users who want to fetch their CAS directly from CDSL without uploading a PDF
 
 See: [`templates/python-cdsl-fetch.py`](templates/python-cdsl-fetch.py), [`templates/nodejs-cdsl-fetch.js`](templates/nodejs-cdsl-fetch.js)
 
-### Pattern 4: Email Import (Gmail Pipeline)
+### Pattern 4: Email Import (OAuth Inbox Pipeline)
 
-For apps that want to automatically find CAS files in a user's Gmail inbox:
+For apps that want to automatically find CAS files in a user's email inbox. Supports Gmail, Outlook, and Zoho via the `provider` parameter on `/v4/inbox/connect` (defaults to `gmail`):
 1. OAuth connect → 2. List CAS files → 3. Download + parse
 
 See: [`templates/python-email-import.py`](templates/python-email-import.py), [`templates/nodejs-email-import.js`](templates/nodejs-email-import.js)
@@ -389,11 +389,11 @@ The MCP server is auto-generated from the OpenAPI spec. Each tool maps to an API
 | `parseContractNote` | `POST /v4/contract_note/parse` | Parse broker contract notes | `pdf_file` or `pdf_url`, `password` |
 | `cdslFetchRequestOTP` | `POST /v4/cdsl/fetch` | CDSL fetch Step 1 — request OTP | `pan`, `bo_id`, `dob` |
 | `cdslFetchVerifyOTP` | `POST /v4/cdsl/fetch/{session_id}/verify` | CDSL fetch Step 2 — verify OTP | `session_id`, `otp`, `num_periods` |
-| `generateCas` | `POST /v4/generate` | Trigger CAS mailback (KFintech + CAMS) | `email`, `from_date`, `to_date`, `password` |
-| `inboxConnect` | `POST /v4/inbox/connect` | Start Gmail OAuth flow | `redirect_uri`, `state` |
+| `generateCas` | `POST /v4/generate` | Trigger CAS mailback (KFintech + CAMS) | `email`, `from_date`, `to_date`, `password`, optional `cas_authority` (`kfintech` default, `cams` Beta) |
+| `inboxConnect` | `POST /v4/inbox/connect` | Start OAuth flow (Gmail/Outlook/Zoho) | `redirect_uri`, `state`, optional `provider` |
 | `inboxStatus` | `GET /v4/inbox/status` | Check inbox connection status | `x-inbox-token` header |
 | `inboxCasList` | `GET /v4/inbox/cas` | List CAS files from inbox | `x-inbox-token` header, optional filters |
-| `inboxDisconnect` | `POST /v4/inbox/disconnect` | Revoke Gmail access | `x-inbox-token` header |
+| `inboxDisconnect` | `POST /v4/inbox/disconnect` | Revoke inbox access | `x-inbox-token` header |
 | `checkCredits` | `POST /v1/credits` | Check remaining API quota | — |
 | `getUsageLogs` | `POST /v1/usage` | Get detailed usage logs | optional `start_time`, `end_time`, `limit` |
 | `getUsageSummary` | `POST /v1/usage/summary` | Get aggregated usage stats | optional `start_time`, `end_time` |
@@ -416,7 +416,7 @@ For detailed guides on specific topics:
 - [`references/cas-types.md`](references/cas-types.md) — CDSL vs NSDL vs CAMS/KFintech explained
 - [`references/unified-response.md`](references/unified-response.md) — Full unified response schema
 - [`references/portfolio-connect-sdk.md`](references/portfolio-connect-sdk.md) — Portfolio Connect SDK guide
-- [`references/email-import-flow.md`](references/email-import-flow.md) — Gmail OAuth flow walkthrough
+- [`references/email-import-flow.md`](references/email-import-flow.md) — Email OAuth flow walkthrough (Gmail, Outlook, Zoho)
 - [`references/cdsl-fetch-flow.md`](references/cdsl-fetch-flow.md) — CDSL 2-step OTP guide
 - [`references/contract-notes.md`](references/contract-notes.md) — Contract note parsing & brokers
 - [`references/error-handling.md`](references/error-handling.md) — Error codes and debugging

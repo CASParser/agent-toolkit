@@ -5,7 +5,7 @@ A collection of skills, templates, and documentation for AI coding agents to int
 ## What is CAS Parser?
 
 CAS Parser is an API platform that extracts structured data from Indian financial portfolio documents:
-- **Portfolio Connect SDK** — drop-in UI widget for web apps (file upload, Gmail import, CDSL fetch — all in one modal)
+- **Portfolio Connect SDK** — drop-in UI widget for web apps (file upload, email inbox import, CDSL fetch — all in one modal)
 - **REST API** — parse CAS PDFs from CDSL, NSDL, and CAMS/KFintech into structured JSON
 - **Contract Notes** — parse broker trade documents from Zerodha, Groww, Upstox, ICICI
 
@@ -141,7 +141,7 @@ Or try specific tasks:
 - **CAS Parsing** — Parse CDSL, NSDL, CAMS/KFintech PDFs into structured JSON via REST API
 - **Contract Notes** — Parse broker trade documents from Zerodha, Groww, Upstox, ICICI
 - **CDSL Fetch** — Download CAS directly from CDSL via OTP authentication
-- **Email Import** — Import CAS files from Gmail via OAuth
+- **Email Import** — Import CAS files from Gmail, Outlook, or Zoho via OAuth
 - **Inbound Email** — Create dedicated email addresses for CAS forwarding with webhook delivery
 - **Unified Response** — Consistent JSON format across all 9 asset classes
 
@@ -174,7 +174,7 @@ Or try specific tasks:
         ├── cas-types.md               # CDSL vs NSDL vs CAMS/KFintech
         ├── unified-response.md        # Full response schema
         ├── portfolio-connect-sdk.md   # SDK integration guide
-        ├── email-import-flow.md       # Gmail OAuth walkthrough
+        ├── email-import-flow.md       # Email OAuth walkthrough (Gmail, Outlook, Zoho)
         ├── cdsl-fetch-flow.md         # CDSL 2-step OTP guide
         ├── contract-notes.md          # Contract note parsing
         ├── error-handling.md          # Error codes and debugging

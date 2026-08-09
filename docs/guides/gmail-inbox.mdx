@@ -1,15 +1,15 @@
 ---
-title: Gmail Inbox Import
-description: Import CAS files directly from user email inboxes via OAuth. No password sharing required.
+title: Email Inbox Import
+description: Import CAS files directly from user email inboxes via OAuth. Supports Gmail, Outlook, and Zoho. No password sharing required.
 ---
 
 ## Overview
 
-Gmail Inbox Import lets users import CAS statements directly from their email — no file uploads or password sharing needed.
+Email Inbox Import lets users import CAS statements directly from their email — no file uploads or password sharing needed. Supports Gmail, Outlook, and Zoho Mail.
 
 ```mermaid
 flowchart LR
-    A[User<br/>Gmail] --> B[OAuth<br/>Consent]
+    A[User<br/>Gmail / Outlook / Zoho] --> B[OAuth<br/>Consent]
     B --> C[CAS Parser<br/>Inbox API]
     C --> D[Your App<br/>Callback]
 ```
@@ -19,6 +19,18 @@ flowchart LR
 - OAuth-based consent flow
 - User can revoke access anytime
 - Tokens encrypted server-side
+
+## Supported providers
+
+Pass `provider` in the connect request to choose the mail service. Defaults to `gmail`.
+
+| Provider | Value | Covers |
+|----------|-------|--------|
+| Gmail | `gmail` | `@gmail.com` and Google Workspace domains |
+| Outlook | `outlook` | Personal Microsoft accounts: `@outlook.com`, `@hotmail.com`, `@live.com`, `@msn.com`, localised variants (`@hotmail.co.uk`, `@live.in`, `@hotmail.fr`), and custom domains registered as personal Microsoft accounts |
+| Zoho Mail | `zoho` | Zoho-hosted mailboxes, including custom domains |
+
+Any unrecognised value is treated as `gmail`. The resolved `provider` is returned in the connect response and reported by `/v4/inbox/status`.
 
 ## Integration flow
 
@@ -30,22 +42,30 @@ import requests
 response = requests.post(
     "https://api.casparser.in/v4/inbox/connect",
     headers={"x-api-key": "YOUR_API_KEY"},
-    json={"redirect_uri": "https://yourapp.com/oauth/callback"}
+    json={
+        "redirect_uri": "https://yourapp.com/oauth/callback",
+        "provider": "outlook",  # "gmail" (default), "outlook", or "zoho"
+    }
 )
 
 data = response.json()
 oauth_url = data["oauth_url"]
+# data["provider"] == "outlook"
 
 # Redirect user to oauth_url
 ```
 
 ### Step 2: User grants consent
 
-The user is redirected to Google's OAuth consent screen. After granting access, they're redirected back to your `redirect_uri` with an `inbox_token`:
+The user is redirected to their provider's OAuth consent screen. After granting access, they're redirected back to your `redirect_uri` with an `inbox_token`:
 
 ```
 https://yourapp.com/oauth/callback?inbox_token=eyJhbGciOiJIUzI1NiIs...
 ```
+
+<Note>
+  The `inbox_token` is long-lived — it stores an encrypted refresh token. A single OAuth connect gives ongoing access to both historical and future CAS statements in the user's inbox. Reuse the same token for every `/v4/inbox/cas` call until the user revokes access via `/v4/inbox/disconnect` or their provider's account settings.
+</Note>
 
 ### Step 3: List CAS files from inbox
 
@@ -135,12 +155,12 @@ requests.post(
 
 ## Using with Portfolio Connect SDK
 
-The Portfolio Connect SDK has built-in Gmail import:
+The Portfolio Connect SDK has built-in inbox import across all supported providers:
 
 ```jsx
 <PortfolioConnect
   accessToken="at_xxx"
-  modes={["upload", "inbox"]}  // Enable Gmail inbox
+  modes={["upload", "inbox"]}  // Enable email inbox import
   onSuccess={(data) => console.log(data)}
 />
 ```

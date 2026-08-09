@@ -1,15 +1,27 @@
-# Email Import Flow (Gmail OAuth)
+# Email Import Flow (OAuth)
 
 ## Overview
 
-The Email Import feature lets users connect their Gmail inbox so your application can find and download CAS attachments automatically. This is a multi-step OAuth flow.
+The Email Import feature lets users connect their email inbox so your application can find and download CAS attachments automatically. This is a multi-step OAuth flow.
+
+## Supported providers
+
+Pass `provider` in the connect request to choose the mail service. Defaults to `gmail`.
+
+| Provider | Value | Covers |
+|----------|-------|--------|
+| Gmail | `gmail` | `@gmail.com` and Google Workspace domains |
+| Outlook | `outlook` | Personal Microsoft accounts (`@outlook.com`, `@hotmail.com`, `@live.com`, `@msn.com`, localised variants, custom domains) |
+| Zoho Mail | `zoho` | Zoho-hosted mailboxes, including custom domains |
+
+Any unrecognised value is treated as `gmail`. The resolved `provider` is returned in the connect response and reported by `/v4/inbox/status`.
 
 ## Flow Diagram
 
 ```
-Your App                   CAS Parser API              Google OAuth            User's Gmail
+Your App                   CAS Parser API              Provider OAuth           User's Inbox
 ┌────────┐                ┌──────────────┐            ┌────────────┐          ┌───────────┐
-│ Step 1  │──connect────▶│ /inbox/       │──redirect─▶│ Google     │          │           │
+│ Step 1  │──connect────▶│ /inbox/       │──redirect─▶│ Provider   │          │           │
 │         │               │ connect      │            │ consent    │          │           │
 │         │               │              │◀─callback──│ screen     │          │           │
 │         │◀─oauth_url───│              │            └────────────┘          │           │
@@ -38,7 +50,8 @@ Content-Type: application/json
 
 {
   "redirect_uri": "https://yourapp.com/oauth-callback",
-  "state": "random-csrf-token"
+  "state": "random-csrf-token",
+  "provider": "outlook"
 }
 ```
 
@@ -46,7 +59,8 @@ Response:
 ```json
 {
   "status": "success",
-  "oauth_url": "https://accounts.google.com/o/oauth2/v2/auth?client_id=...",
+  "oauth_url": "https://login.microsoftonline.com/...",
+  "provider": "outlook",
   "expires_in": 600
 }
 ```
@@ -55,7 +69,7 @@ Response:
 
 ### Step 2: Handle OAuth Callback
 
-After the user authorizes, Google redirects to your `redirect_uri` with query parameters:
+After the user authorizes, the provider redirects to your `redirect_uri` with query parameters:
 
 **On success:**
 ```
@@ -67,7 +81,7 @@ https://yourapp.com/oauth-callback?inbox_token=encrypted_token_here&email=user@g
 https://yourapp.com/oauth-callback?error=access_denied&state=random-csrf-token
 ```
 
-**Store the `inbox_token` client-side** (localStorage, cookie, or state). You'll need it for all subsequent inbox API calls.
+**Store the `inbox_token` client-side** (localStorage, cookie, or state). The token is long-lived — it stores an encrypted refresh token, so a single OAuth connect gives ongoing access to both historical and future CAS statements in the user's inbox. Reuse the same token for every `/v4/inbox/cas` call until the user revokes access.
 
 ### Step 3: List CAS Files
 
@@ -161,7 +175,10 @@ The API searches for emails from these known senders:
 - **Read-only access** — the API cannot send emails or modify the inbox
 - Tokens are encrypted with a server-side secret
 - Users can revoke access anytime via `/v4/inbox/disconnect`
-- Users can also revoke via [Google Account settings](https://myaccount.google.com/permissions)
+- Users can also revoke via their provider's account settings:
+  - Gmail: [Google Account permissions](https://myaccount.google.com/permissions)
+  - Outlook: [Microsoft account apps](https://account.live.com/consent/Manage)
+  - Zoho: Zoho Mail account → Connected Applications
 
 ## Billing
 

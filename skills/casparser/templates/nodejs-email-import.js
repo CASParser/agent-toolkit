@@ -1,7 +1,8 @@
 /**
- * CAS Parser — Gmail Email Import (Node.js)
+ * CAS Parser — Email Inbox Import (Node.js)
  *
- * Full OAuth flow to import CAS files from a user's Gmail inbox.
+ * Full OAuth flow to import CAS files from a user's email inbox.
+ * Supports Gmail (default), Outlook, and Zoho via the `provider` parameter.
  *
  * Flow:
  *   1. Get OAuth URL → redirect user
@@ -18,14 +19,15 @@ const BASE_URL = "https://api.casparser.in";
 const HEADERS = { "x-api-key": API_KEY, "Content-Type": "application/json" };
 
 /**
- * Step 1: Get OAuth URL for Gmail connection.
+ * Step 1: Get OAuth URL for inbox connection.
  *
  * @param {string} redirectUri - Your callback URL
  * @param {string} [state] - CSRF protection token
+ * @param {string} [provider] - Mail provider: "gmail" (default), "outlook", or "zoho"
  * @returns {Promise<string>} OAuth URL to redirect the user to
  */
-async function connectInbox(redirectUri, state = "") {
-  const payload = { redirect_uri: redirectUri };
+async function connectInbox(redirectUri, state = "", provider = "gmail") {
+  const payload = { redirect_uri: redirectUri, provider };
   if (state) payload.state = state;
 
   const response = await fetch(`${BASE_URL}/v4/inbox/connect`, {

@@ -1,7 +1,8 @@
 """
-CAS Parser — Gmail Email Import (Python)
+CAS Parser — Email Inbox Import (Python)
 
-Full OAuth flow to import CAS files from a user's Gmail inbox.
+Full OAuth flow to import CAS files from a user's email inbox.
+Supports Gmail (default), Outlook, and Zoho via the `provider` parameter.
 
 Flow:
   1. Get OAuth URL → redirect user
@@ -21,18 +22,19 @@ BASE_URL = "https://api.casparser.in"
 HEADERS = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 
 
-def connect_inbox(redirect_uri: str, state: str = "") -> str:
+def connect_inbox(redirect_uri: str, state: str = "", provider: str = "gmail") -> str:
     """
-    Step 1: Get OAuth URL for Gmail connection.
+    Step 1: Get OAuth URL for inbox connection.
 
     Args:
         redirect_uri: Your callback URL (e.g., "https://yourapp.com/oauth-callback")
         state: CSRF protection token (optional but recommended)
+        provider: Mail provider — "gmail" (default), "outlook", or "zoho"
 
     Returns:
         OAuth URL to redirect the user to
     """
-    payload = {"redirect_uri": redirect_uri}
+    payload = {"redirect_uri": redirect_uri, "provider": provider}
     if state:
         payload["state"] = state
 
