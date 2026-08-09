@@ -28,7 +28,14 @@ tags:
     description: |
       Endpoints for importing CAS files directly from user email inboxes.
       
-      **Supported Providers:** Gmail (more coming soon)
+      **Supported Providers:**
+
+      - **Gmail** (`gmail`, default) — `@gmail.com` and Google Workspace domains
+      - **Microsoft** (`outlook`) — personal Microsoft accounts: `@outlook.com`,
+        `@hotmail.com`, `@live.com`, `@msn.com`, and localised variants such as
+        `@hotmail.co.uk`, `@live.in`, `@hotmail.fr`. Any other address registered
+        as a personal Microsoft account also works, including custom domains.
+      - **Zoho Mail** (`zoho`) — Zoho-hosted mailboxes, including custom domains
       
       **How it works:**
       1. Call `POST /v4/inbox/connect` to get an OAuth URL
@@ -98,7 +105,7 @@ tags:
       **Status normalization:** Raw CVL portal strings are normalized into clean enums.
       See the `kyc_status` property on `KycPanStatusResponse` for the full list.
 
-      **Credits:** 0.5 per successful lookup. Failed lookups are not billed.
+      **Credits:** 0.25 per successful lookup. Failed lookups are not billed.
 
 paths:
   /v4/smart/parse:
@@ -385,6 +392,10 @@ paths:
         - `state` - Your original state parameter
         
         **Store the `inbox_token` client-side** and use it for all subsequent inbox API calls.
+        The token is long-lived (it stores an encrypted refresh token), so a single OAuth
+        connect gives ongoing access to both historical and future CAS statements in the
+        user's inbox. Reuse the same token until the user revokes access via
+        `/v4/inbox/disconnect` or their provider's account settings.
       operationId: inboxConnect
       security:
         - ApiKeyAuth: []
@@ -406,6 +417,26 @@ paths:
                   type: string
                   description: State parameter for CSRF protection (returned in redirect)
                   example: "abc123"
+                provider:
+                  type: string
+                  enum: [gmail, outlook, zoho]
+                  default: gmail
+                  description: |
+                    Mail provider to connect. Defaults to `gmail`.
+
+                    - `gmail` - Google accounts: `@gmail.com` and Google
+                      Workspace domains.
+                    - `outlook` - personal Microsoft accounts: `@outlook.com`,
+                      `@hotmail.com`, `@live.com`, `@msn.com` and localised
+                      variants (`@hotmail.co.uk`, `@live.in`, `@hotmail.fr`).
+                      Any other address registered as a personal Microsoft
+                      account also works, including custom domains.
+                    - `zoho` - Zoho Mail accounts, including custom domains
+                      hosted on Zoho.
+
+                    Any unrecognised value is treated as `gmail`. The resolved
+                    provider is returned in the response.
+                  example: "outlook"
       responses:
         '200':
           description: OAuth URL generated successfully
@@ -422,6 +453,11 @@ paths:
                     format: uri
                     description: Redirect user to this URL to start OAuth flow
                     example: "https://accounts.google.com/o/oauth2/v2/auth?client_id=..."
+                  provider:
+                    type: string
+                    enum: [gmail, outlook, zoho]
+                    description: The provider this OAuth URL was generated for
+                    example: "outlook"
                   expires_in:
                     type: integer
                     description: Seconds until the OAuth URL expires (typically 10 minutes)
@@ -2983,7 +3019,7 @@ components:
           type: integer
           description: |
             URL expiration time in seconds. Defaults vary by source:
-            - Gmail Inbox Import: 86400 (24h)
+            - Email Inbox Import (Gmail, Outlook, Zoho): 86400 (24h)
             - Inbound Email with `callback_url` set: 172800 (48h)
             - Inbound Email without `callback_url`: aligned with the session TTL (~30 min)
           example: 86400

@@ -3,8 +3,37 @@ title: Release Notes
 description: Latest updates from CAS Parser
 ---
 
-**Last Updated:** June 2026  
+**Last Updated:** July 2026  
 **API Documentation:** [API Reference](/api-reference/introduction)
+
+---
+
+## 📅 July 2026
+
+### Email Inbox Import — Outlook and Zoho
+
+`POST /v4/inbox/connect` now supports Microsoft Outlook and Zoho Mail in addition to Gmail. Pass `provider` in the request body to choose the mail service.
+
+- `gmail` (default) — `@gmail.com` and Google Workspace domains
+- `outlook` — personal Microsoft accounts: `@outlook.com`, `@hotmail.com`, `@live.com`, `@msn.com`, localised variants, and custom domains registered as personal Microsoft accounts
+- `zoho` — Zoho Mail accounts, including custom domains hosted on Zoho
+
+The resolved `provider` is returned in the connect response and reported by `POST /v4/inbox/status`. The rest of the flow (list CAS files, download, parse, disconnect) is unchanged. Billing stays at 0.2 credits per inbox pull.
+
+**Start here:** [Email Inbox Import Guide](/guides/gmail-inbox)
+
+---
+
+### CAS Generator — `cas_authority: "cams"` (Beta)
+
+`POST /v4/generate` now accepts a `cas_authority` parameter to select which RTA portal drives the mailback.
+
+- `kfintech` (default, GA) — retrieves mutual fund data from both RTAs via the KFintech–CAMS data-sharing partnership
+- `cams` (**Beta**) — drives the mailback through the CAMS portal directly. Use this when the investor's mutual funds are serviced primarily by CAMS
+
+The default behaviour is unchanged. Only switch to `cams` when you specifically need the statement sourced from the CAMS portal.
+
+**Start here:** [CAS Generator Guide](/guides/cas-generator)
 
 ---
 

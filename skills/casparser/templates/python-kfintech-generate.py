@@ -26,9 +26,10 @@ def generate_kfintech_cas(
     to_date: str,
     password: str,
     pan_no: str = None,
+    cas_authority: str = "kfintech",
 ) -> dict:
     """
-    Trigger KFintech CAS mailback.
+    Trigger CAS mailback via KFintech or CAMS.
 
     Args:
         email: Investor's email to receive the CAS
@@ -36,6 +37,10 @@ def generate_kfintech_cas(
         to_date: End date (YYYY-MM-DD)
         password: Password for the generated PDF
         pan_no: PAN number (optional)
+        cas_authority: RTA portal to drive the mailback — "kfintech" (default, GA)
+            or "cams" (Beta). KFintech already retrieves data from both RTAs via
+            the KFintech–CAMS data-sharing partnership; use "cams" only when you
+            specifically need the statement sourced from the CAMS portal.
 
     Returns:
         Response dict with status and message.
@@ -46,6 +51,7 @@ def generate_kfintech_cas(
         "from_date": from_date,
         "to_date": to_date,
         "password": password,
+        "cas_authority": cas_authority,
     }
     if pan_no:
         payload["pan_no"] = pan_no

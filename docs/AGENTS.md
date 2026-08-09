@@ -63,7 +63,7 @@ docs/
 | `POST /v4/smart/parse` | Auto-detect and parse any CAS |
 | `POST /v4/generate` | Request CAS via email (KFintech + CAMS) |
 | `POST /v4/cdsl/fetch` | CDSL OTP flow (Step 1) |
-| `POST /v4/inbox/connect` | Gmail OAuth |
+| `POST /v4/inbox/connect` | Email OAuth (Gmail, Outlook, Zoho) |
 | `POST /v1/token` | Generate access token |
 
 ## Local Development
