@@ -19,7 +19,7 @@ tags:
   - name: CAS Parser
     description: Endpoints for parsing CAS PDF files from different sources.
   - name: CAS Generator
-    description: Endpoints for generating new CAS documents via email mailback (KFintech).
+    description: Endpoints for generating new CAS documents via email mailback (KFintech and CAMS).
   - name: CAS Fetch
     description: |
       Endpoints for fetching CAS documents with instant download.
@@ -106,6 +106,23 @@ tags:
       See the `kyc_status` property on `KycPanStatusResponse` for the full list.
 
       **Credits:** 0.25 per successful lookup. Failed lookups are not billed.
+  - name: Verification
+    description: |
+      Verify the regulatory registration of a financial intermediary — a yes/no
+      check rather than a directory search.
+
+      - **`/v1/verify/sebi`** — any SEBI-registered intermediary (Investment
+        Adviser, Research Analyst, Portfolio Manager, Stock Broker, Mutual Fund,
+        AIF, and more). Send a `registration_number` and the category is
+        auto-detected from its sequence; or send a `name` with an explicit `type`.
+      - **`/v1/verify/mfd`** — AMFI mutual-fund distributors by ARN, including a
+        screen against AMFI's suspended / terminated / terminated-EUIN lists.
+
+      A "not found" result is a successful verification (HTTP 200,
+      `verified: false`) and is billed. Upstream failures surface as 5xx and are
+      not billed.
+
+      **Credits:** 0.25 per successful verification.
 
 paths:
   /v4/smart/parse:
@@ -989,7 +1006,6 @@ paths:
       operationId: checkKycPanStatus
       security:
         - ApiKeyAuth: []
-        - AccessTokenAuth: []
       requestBody:
         required: true
         content:
@@ -1152,7 +1168,6 @@ paths:
       operationId: digilockerAccountLookup
       security:
         - ApiKeyAuth: []
-        - AccessTokenAuth: []
       requestBody:
         required: true
         content:
@@ -1260,7 +1275,6 @@ paths:
       operationId: startDigilockerSession
       security:
         - ApiKeyAuth: []
-        - AccessTokenAuth: []
       requestBody:
         required: true
         content:
@@ -1390,7 +1404,6 @@ paths:
       operationId: digilockerResult
       security:
         - ApiKeyAuth: []
-        - AccessTokenAuth: []
       parameters:
         - name: session_id
           in: path
@@ -2121,6 +2134,261 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ============================================
+  # Verification Endpoints
+  # /v1/verify/sebi, /v1/verify/mfd
+  # ============================================
+  /v1/verify/sebi:
+    post:
+      tags:
+        - Verification
+      summary: Verify a SEBI-registered intermediary
+      description: |
+        Verify any SEBI-registered intermediary. Provide a `registration_number`
+        and the category is auto-detected from its sequence (e.g. `INA…` →
+        Investment Adviser, `INP…` → Portfolio Manager, `INZ…` → Stock Broker).
+        Alternatively, provide a `name` together with a `type` slug. `type` can
+        also override detection, and is required for fund/FPI registration
+        numbers that do not encode a category.
+
+        `verified` is `true` only when a current registration is found and its
+        status is `ACTIVE`. A missing registration returns HTTP 200 with
+        `verified: false` and `registration_status: NOT_FOUND`.
+
+        **Credits:** 0.25 per successful verification.
+      operationId: verifySebiIntermediary
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              anyOf:
+                - required: [registration_number]
+                - required: [name, type]
+              properties:
+                registration_number:
+                  type: string
+                  description: >-
+                    SEBI registration number. When provided, the category is
+                    auto-detected from its sequence (INA…→investment-adviser,
+                    INH…→research-analyst, INP…→portfolio-manager,
+                    INM…→merchant-banker, INR…→registrar-transfer-agent,
+                    INZ…→stock-broker). This is the authoritative input — any
+                    `name` sent alongside it is ignored.
+                  example: "INP000000670"
+                name:
+                  type: string
+                  description: >-
+                    Entity/trade name to search by. Used only when
+                    `registration_number` is absent, and then `type` is required.
+                  example: "Motilal Oswal"
+                type:
+                  type: string
+                  description: >-
+                    Category slug. Overrides auto-detection; required for a name
+                    search and for fund/FPI registration numbers that don't encode
+                    a category. Short aliases are also accepted (ria, ra, pms,
+                    broker, rta, mf, aif, cra, vcf, fvci, fpi, kra, invit, reit).
+                  enum:
+                    - investment-adviser
+                    - research-analyst
+                    - portfolio-manager
+                    - stock-broker
+                    - merchant-banker
+                    - registrar-transfer-agent
+                    - mutual-fund
+                    - alternative-investment-fund
+                    - credit-rating-agency
+                    - custodian
+                    - debenture-trustee
+                    - venture-capital-fund
+                    - foreign-venture-capital-investor
+                    - foreign-portfolio-investor
+                    - kyc-registration-agency
+                    - infrastructure-investment-trust
+                    - real-estate-investment-trust
+                    - esg-rating-provider
+                    - vault-manager
+                  example: "portfolio-manager"
+      responses:
+        '200':
+          description: Verification completed (found or not found)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SebiVerifyResponse'
+              examples:
+                found:
+                  summary: Active registration found
+                  value:
+                    status: success
+                    verified: true
+                    authority: SEBI
+                    category: portfolio-manager
+                    category_label: Portfolio Manager (PMS)
+                    registration_number: INP000000670
+                    name: MOTILAL OSWAL ASSET MANAGEMENT COMPANY LIMITED
+                    registration_status: ACTIVE
+                    valid_from: "2014-09-16"
+                    valid_till: null
+                    is_perpetual: true
+                    address: "10th Floor, Motilal Oswal Tower, Prabhadevi, MUMBAI, MAHARASHTRA, 400025"
+                    email: null
+                    telephone: null
+                    contact_person: null
+                    detected_by: registration_number
+                not_found:
+                  summary: No current registration in this category
+                  value:
+                    status: success
+                    verified: false
+                    authority: SEBI
+                    category: investment-adviser
+                    category_label: Investment Adviser (RIA)
+                    registration_number: INA999999999
+                    name: null
+                    registration_status: NOT_FOUND
+                    valid_from: null
+                    valid_till: null
+                    is_perpetual: false
+                    address: null
+                    email: null
+                    telephone: null
+                    contact_person: null
+                    detected_by: registration_number
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Category could not be detected from the registration number; pass a `type`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/verify/mfd:
+    post:
+      tags:
+        - Verification
+      summary: Verify an AMFI mutual-fund distributor (ARN)
+      description: |
+        Verify a mutual-fund distributor by ARN. The ARN (and its EUIN) is
+        screened against AMFI's suspended, terminated, and terminated-EUIN
+        lists; a hit sets `registration_status` to `SUSPENDED`/`TERMINATED`,
+        `negative_list_hit` to `true`, and `verified` to `false`.
+
+        **Credits:** 0.25 per successful verification.
+      operationId: verifyMfdDistributor
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - arn
+              properties:
+                arn:
+                  type: string
+                  description: AMFI Registration Number. Digits only; an `ARN-` prefix is tolerated.
+                  pattern: '^(ARN-)?[0-9]+$'
+                  example: "123456"
+      responses:
+        '200':
+          description: Verification completed (found or not found)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfdVerifyResponse'
+              examples:
+                active:
+                  summary: Active distributor
+                  value:
+                    status: success
+                    verified: true
+                    authority: AMFI
+                    category: mutual-fund-distributor
+                    category_label: Mutual Fund Distributor (ARN)
+                    arn: "123456"
+                    name: Example Wealth Distributors LLP
+                    euin: E123456
+                    kyd_compliant: true
+                    registration_status: ACTIVE
+                    valid_from: "2024-04-01"
+                    valid_till: "2027-03-31"
+                    is_perpetual: false
+                    address: "MG Road, Bengaluru, Karnataka"
+                    pincode: "560001"
+                    negative_list_hit: false
+                    negative_list: null
+                suspended:
+                  summary: On AMFI's adverse list (suspended)
+                  value:
+                    status: success
+                    verified: false
+                    authority: AMFI
+                    category: mutual-fund-distributor
+                    category_label: Mutual Fund Distributor (ARN)
+                    arn: "123456"
+                    name: null
+                    euin: null
+                    kyd_compliant: null
+                    registration_status: SUSPENDED
+                    valid_from: null
+                    valid_till: null
+                    is_perpetual: false
+                    address: null
+                    pincode: null
+                    negative_list_hit: true
+                    negative_list:
+                      type: suspended
+                      since: "May 26, 2006"
+                not_found:
+                  summary: No active registration and not on an adverse list
+                  value:
+                    status: success
+                    verified: false
+                    authority: AMFI
+                    category: mutual-fund-distributor
+                    category_label: Mutual Fund Distributor (ARN)
+                    arn: "999999"
+                    name: null
+                    euin: null
+                    kyd_compliant: null
+                    registration_status: NOT_FOUND
+                    valid_from: null
+                    valid_till: null
+                    is_perpetual: false
+                    address: null
+                    pincode: null
+                    negative_list_hit: false
+                    negative_list: null
+        '400':
+          description: Missing `arn`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================
   # Portfolio Connect SDK Endpoints
   # ============================================
   # ============================================
@@ -2312,6 +2580,210 @@ components:
           type: string
           description: A descriptive message explaining the error.
           example: "Invalid PDF file or password."
+    SebiVerifyResponse:
+      type: object
+      description: >-
+        Result of a SEBI intermediary verification. Every listed property is
+        always present on a 200 response (fields are null when not applicable);
+        `verified` is the boolean gate to act on.
+      required:
+        - status
+        - verified
+        - authority
+        - category
+        - registration_status
+        - detected_by
+      properties:
+        status:
+          type: string
+          enum: [success]
+        verified:
+          type: boolean
+          description: True only when a current registration is found and ACTIVE.
+        authority:
+          type: string
+          enum: [SEBI]
+        category:
+          type: string
+          description: Detected/selected category slug.
+          enum:
+            - investment-adviser
+            - research-analyst
+            - portfolio-manager
+            - stock-broker
+            - merchant-banker
+            - registrar-transfer-agent
+            - mutual-fund
+            - alternative-investment-fund
+            - credit-rating-agency
+            - custodian
+            - debenture-trustee
+            - venture-capital-fund
+            - foreign-venture-capital-investor
+            - foreign-portfolio-investor
+            - kyc-registration-agency
+            - infrastructure-investment-trust
+            - real-estate-investment-trust
+            - esg-rating-provider
+            - vault-manager
+          example: portfolio-manager
+        category_label:
+          type: string
+          example: Portfolio Manager (PMS)
+        registration_number:
+          type: string
+          nullable: true
+          example: INP000000670
+        name:
+          type: string
+          nullable: true
+        registration_status:
+          type: string
+          description: >-
+            ACTIVE = currently registered; EXPIRED = validity end date passed;
+            NOT_FOUND = no current registration in this category.
+          enum: [ACTIVE, EXPIRED, NOT_FOUND]
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_till:
+          type: string
+          format: date
+          nullable: true
+          description: Null when the registration is perpetual.
+        is_perpetual:
+          type: boolean
+        address:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        telephone:
+          type: string
+          nullable: true
+        contact_person:
+          type: string
+          nullable: true
+        detected_by:
+          type: string
+          enum: [registration_number, type]
+          description: How the category was resolved.
+      example:
+        status: success
+        verified: true
+        authority: SEBI
+        category: investment-adviser
+        category_label: Investment Adviser (RIA)
+        registration_number: INA000000888
+        name: 360 ONE Investment Adviser and Trustee Services Limited
+        registration_status: ACTIVE
+        valid_from: "2014-01-22"
+        valid_till: null
+        is_perpetual: true
+        address: "IIFL Centre, Kamala Mills, Lower Parel, MUMBAI, MAHARASHTRA, 400013"
+        email: "advcompliance@360.one"
+        telephone: "0918268532456"
+        contact_person: "Deepika Ghagare"
+        detected_by: registration_number
+    MfdVerifyResponse:
+      type: object
+      description: >-
+        Result of an AMFI mutual-fund distributor (ARN) verification. Every
+        listed property is always present on a 200 response (null when not
+        applicable); `verified` is the boolean gate to act on.
+      required:
+        - status
+        - verified
+        - authority
+        - category
+        - arn
+        - registration_status
+        - negative_list_hit
+      properties:
+        status:
+          type: string
+          enum: [success]
+        verified:
+          type: boolean
+          description: True only when the ARN is on the active register and not on an adverse list.
+        authority:
+          type: string
+          enum: [AMFI]
+        category:
+          type: string
+          enum: [mutual-fund-distributor]
+        category_label:
+          type: string
+          example: Mutual Fund Distributor (ARN)
+        arn:
+          type: string
+          example: "123456"
+        name:
+          type: string
+          nullable: true
+        euin:
+          type: string
+          nullable: true
+        kyd_compliant:
+          type: boolean
+          nullable: true
+        registration_status:
+          type: string
+          description: >-
+            ACTIVE = on the active register; SUSPENDED / TERMINATED = on an AMFI
+            adverse list (see `negative_list`); EXPIRED = ARN validity lapsed;
+            NOT_FOUND = no active registration and not on an adverse list.
+          enum: [ACTIVE, EXPIRED, SUSPENDED, TERMINATED, NOT_FOUND]
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_till:
+          type: string
+          format: date
+          nullable: true
+        is_perpetual:
+          type: boolean
+        address:
+          type: string
+          nullable: true
+        pincode:
+          type: string
+          nullable: true
+        negative_list_hit:
+          type: boolean
+          description: True when the ARN/EUIN appears on an AMFI adverse list.
+        negative_list:
+          type: object
+          nullable: true
+          description: Details of the adverse-list hit, else null.
+          properties:
+            type:
+              type: string
+              enum: [suspended, terminated, euin_terminated]
+            since:
+              type: string
+              description: Effective date as published by AMFI.
+      example:
+        status: success
+        verified: true
+        authority: AMFI
+        category: mutual-fund-distributor
+        category_label: Mutual Fund Distributor (ARN)
+        arn: "123456"
+        name: Example Wealth Distributors LLP
+        euin: E123456
+        kyd_compliant: true
+        registration_status: ACTIVE
+        valid_from: "2024-04-01"
+        valid_till: "2027-03-31"
+        is_perpetual: false
+        address: "MG Road, Bengaluru, Karnataka"
+        pincode: "560001"
+        negative_list_hit: false
+        negative_list: null
     UnifiedResponse:
       type: object
       properties:

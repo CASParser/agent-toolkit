@@ -182,3 +182,38 @@ curl -X POST "$API_URL/v1/token" \
 # ============================================================
 curl -X POST "$API_URL/v1/token/verify" \
   -H "x-api-key: at_YOUR_ACCESS_TOKEN_HERE"
+
+# ============================================================
+# 17. Verify a SEBI intermediary — by registration number
+#     (category auto-detected: INA→adviser, INH→research-analyst,
+#      INP→PMS, INM→merchant-banker, INR→RTA, INZ→stock-broker)
+# ============================================================
+curl -X POST "$API_URL/v1/verify/sebi" \
+  -H "x-api-key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "registration_number": "INA000000888"
+  }'
+
+# ============================================================
+# 18. Verify a SEBI intermediary — by name (type required)
+#     type also needed for fund/FPI numbers (mutual-fund, aif, fpi, ...)
+# ============================================================
+curl -X POST "$API_URL/v1/verify/sebi" \
+  -H "x-api-key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Motilal Oswal",
+    "type": "portfolio-manager"
+  }'
+
+# ============================================================
+# 19. Verify an AMFI Mutual Fund Distributor by ARN
+#     (also screened against suspended / terminated / EUIN-terminated lists)
+# ============================================================
+curl -X POST "$API_URL/v1/verify/mfd" \
+  -H "x-api-key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "arn": "89762"
+  }'

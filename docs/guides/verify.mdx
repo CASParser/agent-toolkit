@@ -1,0 +1,241 @@
+---
+title: Registry Verification
+description: Verify that an advisor or distributor is genuinely registered with SEBI or AMFI, in a single API call — before you onboard them.
+---
+
+## Overview
+
+Registry Verification confirms a financial intermediary's regulatory registration against the official public registers. Two endpoints, one job — a yes/no answer you can gate onboarding on:
+
+- **`POST /v1/verify/sebi`** — any SEBI-registered intermediary (Investment Adviser, Research Analyst, Portfolio Manager, Stock Broker, Merchant Banker, RTA, Mutual Fund, AIF, and more).
+- **`POST /v1/verify/mfd`** — an AMFI Mutual Fund Distributor by ARN, screened against AMFI's suspended, terminated, and terminated-EUIN lists.
+
+**What you get:**
+- A single `verified` boolean to gate on
+- A normalized `registration_status` (`ACTIVE`, `EXPIRED`, `SUSPENDED`, `TERMINATED`, `NOT_FOUND`)
+- The registrant's name, validity, and category — straight from the regulator's register
+
+**What you need:**
+- A registration number (SEBI) or an ARN (AMFI). That's it — the category is auto-detected.
+
+<Note>
+  A "not found" result is a successful verification: you get HTTP 200 with `verified: false` and `registration_status: NOT_FOUND`. It's billed like any other lookup. Only genuine service errors return 5xx (and those are free).
+</Note>
+
+## Verify a SEBI intermediary
+
+Send the registration number — the category is detected from its sequence. No need to tell us whether it's an adviser, broker, or portfolio manager.
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v1/verify/sebi",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"registration_number": "INA000000888"},
+    timeout=30,
+)
+
+data = response.json()
+
+if data["verified"]:
+    print(f"{data['name']} — {data['category_label']}, {data['registration_status']}")
+else:
+    print(f"Not verified — {data['registration_status']}")
+```
+
+### Categories & auto-detection
+
+`/v1/verify/sebi` covers **every SEBI intermediary register**. When you send a `registration_number`, the character after `IN` selects the category automatically — no `type` needed:
+
+| Prefix | Category | `type` slug |
+|--------|----------|-------------|
+| `INA` | Investment Adviser (RIA) | `investment-adviser` |
+| `INH` | Research Analyst | `research-analyst` |
+| `INP` | Portfolio Manager (PMS) | `portfolio-manager` |
+| `INM` | Merchant Banker | `merchant-banker` |
+| `INR` | Registrar & Share Transfer Agent | `registrar-transfer-agent` |
+| `INB` `INE` `INF` `INZ` | Stock Broker | `stock-broker` |
+
+The remaining registers don't encode a category in the number (funds, FPIs, trusts, etc.), so pass `type` explicitly. These are all supported:
+
+| `type` slug | Category |
+|-------------|----------|
+| `mutual-fund` | Mutual Fund |
+| `alternative-investment-fund` | Alternative Investment Fund (AIF) |
+| `credit-rating-agency` | Credit Rating Agency |
+| `custodian` | Custodian |
+| `debenture-trustee` | Debenture Trustee |
+| `venture-capital-fund` | Venture Capital Fund |
+| `foreign-venture-capital-investor` | Foreign Venture Capital Investor |
+| `foreign-portfolio-investor` | Foreign Portfolio Investor (FPI) |
+| `kyc-registration-agency` | KYC Registration Agency (KRA) |
+| `infrastructure-investment-trust` | Infrastructure Investment Trust (InvIT) |
+| `real-estate-investment-trust` | Real Estate Investment Trust (REIT) |
+| `esg-rating-provider` | ESG Rating Provider |
+| `vault-manager` | Vault Manager |
+
+Short aliases are accepted anywhere a `type` is expected: `ria`, `ia`, `ra`, `pms`, `broker`, `rta`, `mf`, `aif`, `cra`, `vcf`, `fvci`, `fpi`, `kra`, `invit`, `reit`.
+
+`type` is also how you **search by name** (there's no number to detect from), or **override** detection:
+
+```python
+# Search by name — type is required when there's no registration number
+requests.post(
+    "https://api.casparser.in/v1/verify/sebi",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"name": "Motilal Oswal", "type": "portfolio-manager"},
+    timeout=30,
+)
+```
+
+<Note>
+  The registration number is authoritative. If you send both `registration_number` and `name`, the name is ignored — we never let a mismatched name turn a real registration into a false "not found".
+</Note>
+
+### SEBI response
+
+```json
+{
+  "status": "success",
+  "verified": true,
+  "authority": "SEBI",
+  "category": "investment-adviser",
+  "category_label": "Investment Adviser (RIA)",
+  "registration_number": "INA000000888",
+  "name": "360 ONE Investment Adviser and Trustee Services Limited",
+  "registration_status": "ACTIVE",
+  "valid_from": "2014-01-22",
+  "valid_till": null,
+  "is_perpetual": true,
+  "address": "IIFL Centre, Kamala Mills, Lower Parel, MUMBAI, MAHARASHTRA, 400013",
+  "email": "advcompliance@example.com",
+  "telephone": "0912345678",
+  "contact_person": "Compliance Officer",
+  "detected_by": "registration_number"
+}
+```
+
+Every key is always present on a 200 response — `null` when it doesn't apply (e.g. a `NOT_FOUND` result carries the same keys with nulls). Use `verified` as your gate.
+
+## Verify an AMFI distributor (ARN)
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.casparser.in/v1/verify/mfd",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={"arn": "89762"},
+    timeout=30,
+)
+
+data = response.json()
+print(data["registration_status"])   # ACTIVE / SUSPENDED / TERMINATED / NOT_FOUND
+```
+
+The ARN — and the EUIN attached to it — is screened against AMFI's adverse lists. A distributor who has been suspended or terminated for cause is reported as such, not merely "not found":
+
+```json
+{
+  "status": "success",
+  "verified": false,
+  "authority": "AMFI",
+  "category": "mutual-fund-distributor",
+  "category_label": "Mutual Fund Distributor (ARN)",
+  "arn": "89762",
+  "name": null,
+  "euin": null,
+  "kyd_compliant": null,
+  "registration_status": "SUSPENDED",
+  "valid_from": null,
+  "valid_till": null,
+  "is_perpetual": false,
+  "address": null,
+  "pincode": null,
+  "negative_list_hit": true,
+  "negative_list": { "type": "suspended", "since": "May 26, 2006" }
+}
+```
+
+<Warning>
+  Only an **exact** ARN matches. A partial or non-existent ARN returns `NOT_FOUND` — we never resolve a fuzzy search to some other distributor's record.
+</Warning>
+
+An active distributor returns `verified: true`, `kyd_compliant`, and the ARN's `valid_from`/`valid_till`. `negative_list_hit` is `false` and `negative_list` is `null`.
+
+### Adverse-list screening
+
+Every ARN is checked against three AMFI lists. A hit populates `negative_list` and overrides `registration_status`:
+
+| `negative_list.type` | Source list | `registration_status` |
+|----------------------|-------------|----------------------|
+| `suspended` | ARN suspended from mutual fund business | `SUSPENDED` |
+| `terminated` | ARN terminated | `TERMINATED` |
+| `euin_terminated` | The EUIN attached to the ARN was terminated | `TERMINATED` |
+
+`negative_list.since` carries the effective date AMFI published (e.g. `"May 26, 2006"`).
+
+On an active record, three AMFI-specific fields matter:
+- **`kyd_compliant`** — the distributor's Know Your Distributor (KYD) status. `true` when compliant.
+- **`euin`** — the Employee Unique Identification Number of the individual under the ARN.
+- **`valid_from` / `valid_till`** — the ARN's current validity window (ARNs are renewed, never perpetual).
+
+## `registration_status` values
+
+| Status | Meaning | `verified` |
+|--------|---------|-----------|
+| `ACTIVE` | Currently registered and in good standing | `true` |
+| `EXPIRED` | Registration validity end date has passed | `false` |
+| `SUSPENDED` | On AMFI's suspended list (see `negative_list`) | `false` |
+| `TERMINATED` | On AMFI's terminated / terminated-EUIN list | `false` |
+| `NOT_FOUND` | No current registration in this register | `false` |
+
+`SUSPENDED` and `TERMINATED` are MFD-only. SEBI's register lists current registrations, so a lapsed or cancelled SEBI registration simply reads `NOT_FOUND`.
+
+## Credit usage
+
+| Operation | Credits |
+|-----------|---------|
+| Successful verification (found **or** not found) | 0.25 |
+| Failed lookup (any 5xx) | 0 |
+
+Both endpoints bill under a single `verify` feature. The register the lookup hit (SEBI vs AMFI) is recorded on the usage event, so you can still break usage down by source.
+
+## Error handling
+
+| HTTP status | Cause | Action |
+|-------------|-------|--------|
+| `400` | Missing input, unknown `type`, or `name` without `type` | Fix the request body |
+| `401` | Invalid or missing API key | Check the `x-api-key` header |
+| `403` | `verify` not enabled on your plan, or quota exhausted | Check your plan / top up |
+| `422` | Category couldn't be detected from the registration number | Pass an explicit `type` |
+| `500` | The verification service is temporarily unavailable | Retry with backoff |
+
+```python
+try:
+    r = requests.post(
+        "https://api.casparser.in/v1/verify/sebi",
+        headers={"x-api-key": "YOUR_API_KEY"},
+        json={"registration_number": "INA000000888"},
+        timeout=30,
+    )
+    r.raise_for_status()
+    data = r.json()
+except requests.exceptions.HTTPError as e:
+    if e.response.status_code == 500:
+        print("Register unavailable — retry in a few seconds")
+    else:
+        raise
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="KYC PAN Status" icon="id-card" href="/guides/kyc-pan-status">
+    Check an investor's KYC status across all five KRAs
+  </Card>
+  <Card title="CAS Parsing" icon="file-pdf" href="/guides/parsing">
+    Parse portfolio statements once the intermediary is verified
+  </Card>
+</CardGroup>

@@ -104,6 +104,7 @@
               "guides/cdsl-fetch",
               "guides/kyc-pan-status",
               "guides/kyc-digilocker",
+              "guides/verify",
               "guides/mcp-server"
             ]
           },

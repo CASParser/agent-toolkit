@@ -15,9 +15,9 @@ CAS Parser is an API platform that extracts structured data from Indian financia
 |-----------|-------------|
 | **AGENTS.md** | Integration rules your AI agent follows automatically |
 | **SKILL.md** | Domain knowledge (Indian financial concepts, API architecture, integration patterns) |
-| **Templates** | 15 copy-paste-ready code snippets (Python, Node.js, React, HTML, curl) |
-| **References** | 9 detailed guides + full OpenAPI spec for complex flows |
-| **MCP Server** | 17 live API tools your agent can call directly (parse, fetch, import, credits) |
+| **Templates** | 16 copy-paste-ready code snippets (Python, Node.js, React, HTML, curl) |
+| **References** | 10 detailed guides + full OpenAPI spec for complex flows |
+| **MCP Server** | 22 live API tools your agent can call directly (parse, fetch, import, verify, KYC, credits) |
 
 The agent instructions + domain knowledge + MCP tools work together so your AI coding agent can build CAS Parser integrations without you having to explain the API.
 
@@ -143,6 +143,7 @@ Or try specific tasks:
 - **CDSL Fetch** — Download CAS directly from CDSL via OTP authentication
 - **Email Import** — Import CAS files from Gmail, Outlook, or Zoho via OAuth
 - **Inbound Email** — Create dedicated email addresses for CAS forwarding with webhook delivery
+- **Registry Verification** — Verify SEBI intermediaries (RIA, Research Analyst, PMS, broker) and AMFI distributors (ARN) against the official registers before onboarding
 - **Unified Response** — Consistent JSON format across all 9 asset classes
 
 ## Project Structure
@@ -164,6 +165,7 @@ Or try specific tasks:
     │   ├── python-kfintech-generate.py# Python: KFintech mailback
     │   ├── python-inbound-email.py    # Python: inbound email forwarding
     │   ├── python-credits-check.py    # Python: quota & usage monitoring
+    │   ├── python-verify.py           # Python: verify SEBI/AMFI registration
     │   ├── nodejs-smart-parse.js      # Node.js: smart parse
     │   ├── nodejs-cdsl-fetch.js       # Node.js: CDSL OTP flow
     │   ├── nodejs-email-import.js     # Node.js: email import
