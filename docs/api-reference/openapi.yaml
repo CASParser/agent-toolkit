@@ -2259,6 +2259,7 @@ paths:
                     contact_person: null
                     detected_by: registration_number
         '400':
+          description: Invalid request — provide either `registration_number`, or `name` together with `type`.
           content:
             application/json:
               schema:
