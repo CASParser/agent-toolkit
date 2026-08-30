@@ -143,6 +143,19 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 - **Never hardcode; never expose raw API keys to the frontend.** Use access tokens (`at_`) for client-facing calls.
 - **Credits:** account-lookup and session are **free**; `result` is **0.25 credits per call** regardless of how many documents are fetched. Failed operations are free.
 
+### Registry Verification (SEBI + AMFI)
+- Confirm an advisor's or distributor's regulatory registration **before onboarding them**. Two endpoints, both return a `verified` boolean to gate on.
+- `POST /v1/verify/sebi` — verify any SEBI-registered intermediary. Send `registration_number` and the category is **auto-detected from its sequence**: `INA`→investment-adviser, `INH`→research-analyst, `INP`→portfolio-manager, `INM`→merchant-banker, `INR`→registrar-transfer-agent, `INZ`→stock-broker.
+  - To search by name, send `name` **and** `type` (the category slug).
+  - Fund/pooled vehicles (mutual-fund, alternative-investment-fund, REIT, InvIT, FPI, …) don't encode a category in the number — pass an explicit `type`.
+  - The registration number is authoritative: if you send both `registration_number` and `name`, the name is ignored.
+- `POST /v1/verify/mfd` — verify an AMFI Mutual Fund Distributor by `arn` (digits; an `ARN-` prefix is tolerated). The ARN and its EUIN are screened against AMFI's suspended / terminated / terminated-EUIN lists — a hit reports `SUSPENDED`/`TERMINATED` with a `negative_list` block, not merely `NOT_FOUND`. **Only an exact ARN matches** — a partial ARN returns `NOT_FOUND`, never someone else's record.
+- `registration_status` is one of `ACTIVE`, `EXPIRED`, `SUSPENDED`, `TERMINATED`, `NOT_FOUND`. `verified` is `true` only when `ACTIVE`.
+- **A "not found" result is a successful `200` with `verified: false`, and it is billed.** Only genuine upstream failures return `5xx` (free).
+- Flat response; every key is always present (`null` when not applicable). Never expose raw API keys to the frontend — use access tokens (`at_`).
+- **0.25 credits** per successful verification (found or not found), billed under a single `verify` feature. Failed lookups (`5xx`) are free.
+- See [`references/registry-verification.md`](skills/casparser/references/registry-verification.md) for the full category matrix (all 19 SEBI registers), every response field, and the adverse-list rules.
+
 ### PDF Requirements
 - Only **original, digitally-generated PDFs** are supported. No scanned/photographed PDFs (no OCR).
 - **Tampered or modified PDFs are rejected** — the API has built-in fraud prevention for credit underwriting use-cases.
@@ -174,6 +187,7 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
   | Contract Note Parse | **0.5** |
   | KYC PAN Status | **0.25** |
   | KYC DigiLocker (result) | **0.25** |
+  | Registry Verification (SEBI / AMFI) | **0.25** |
   | CDSL OTP Fetch | **0.5** |
   | CAS Generator (KFintech + CAMS) | **0.5** |
   | Email Inbox Pull (Gmail, Outlook, Zoho) | **0.2** |
@@ -195,6 +209,7 @@ Always check [`skills/casparser/SKILL.md`](skills/casparser/SKILL.md) for existi
 - Inbound email (email forwarding)
 - KYC PAN status check
 - KYC DigiLocker document fetch
+- Registry verification (SEBI intermediary / AMFI distributor)
 - Credits and usage monitoring
 
 ## MCP Server

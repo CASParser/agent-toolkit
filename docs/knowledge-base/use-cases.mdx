@@ -81,6 +81,35 @@ Grip Invest, KFintech
 
 ---
 
+## Advisor & Distributor Onboarding
+
+### Challenge
+Platforms and networks that onboard financial advisors and mutual fund distributors must confirm each one is genuinely registered — an RIA with SEBI, a distributor with AMFI — and hasn't been suspended or terminated. Checking the regulators' websites by hand doesn't scale.
+
+### Solution
+Verify a registration number against the official register in one API call, before onboarding. `verified` gates the decision, and suspended or terminated distributors are flagged — not just reported as "not found".
+
+### Implementation
+
+```python
+# Verify a SEBI Registered Investment Adviser (category auto-detected from the number)
+ria = casparser.verify_sebi(registration_number="INA000000888")
+if not ria["verified"]:
+    reject(f"Not an active RIA — {ria['registration_status']}")
+
+# Verify a mutual fund distributor by ARN, with AMFI adverse-list screening
+mfd = casparser.verify_mfd(arn="89762")
+if mfd["registration_status"] in ("SUSPENDED", "TERMINATED"):
+    escalate(f"ARN on AMFI {mfd['registration_status']} list")
+```
+
+### Benefits
+- **Compliant onboarding** — Confirm SEBI/AMFI registration before granting access
+- **Catch bad actors** — Suspended and terminated distributors are flagged automatically
+- **Zero manual lookups** — One call replaces checking the regulators' portals by hand
+
+---
+
 ## Tax Filing Platforms
 
 ### Challenge

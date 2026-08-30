@@ -3,8 +3,25 @@ title: Release Notes
 description: Latest updates from CAS Parser
 ---
 
-**Last Updated:** July 2026  
+**Last Updated:** August 2026  
 **API Documentation:** [API Reference](/api-reference/introduction)
+
+---
+
+## 📅 August 2026
+
+### Registry Verification — SEBI & AMFI
+
+Verify that a financial advisor or distributor is genuinely registered — before you onboard them.
+
+- `POST /v1/verify/sebi` — verify any SEBI-registered intermediary (Investment Adviser, Research Analyst, Portfolio Manager, Stock Broker, Merchant Banker, RTA, Mutual Fund, AIF, and more). The category is **auto-detected** from the registration number's sequence; pass `type` to search by name instead.
+- `POST /v1/verify/mfd` — verify an AMFI Mutual Fund Distributor by ARN, screened against AMFI's suspended, terminated, and terminated-EUIN lists.
+
+Both return a single `verified` boolean to gate onboarding on, plus a normalized `registration_status` (`ACTIVE`, `EXPIRED`, `SUSPENDED`, `TERMINATED`, `NOT_FOUND`). A "not found" is a successful `200` with `verified: false`.
+
+**Credits:** 0.25 per successful verification. Failed lookups are free.
+
+**Start here:** [Registry Verification Guide](/guides/verify)
 
 ---
 
