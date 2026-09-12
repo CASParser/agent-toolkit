@@ -18,6 +18,8 @@ servers:
 tags:
   - name: CAS Parser
     description: Endpoints for parsing CAS PDF files from different sources.
+  - name: RTA Sync
+    description: Endpoints for reading CAMS and KFintech RTA files and returning clean canonical records.
   - name: CAS Generator
     description: Endpoints for generating new CAS documents via email mailback (KFintech and CAMS).
   - name: CAS Fetch
@@ -147,6 +149,97 @@ paths:
                 $ref: '#/components/schemas/UnifiedResponse'
         '400':
           description: Bad request (Invalid PDF file, missing parameters, or invalid password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/rta-sync/normalize:
+    post:
+      tags:
+        - RTA Sync
+      summary: Normalize mutual-fund RTA files
+      description: |
+        Upload one or more CAMS or KFintech reverse-feed files and receive typed
+        canonical data sets. The endpoint accepts CSV, XLS, XLSX, and DBF files,
+        detects the source report from the headers, applies provider-specific
+        cleanup rules, and returns normalized records with warnings and a batch
+        summary.
+
+        RTA Sync preserves reported holdings and brokerage payouts as source-backed
+        records. It does not calculate portfolio valuations or commissions.
+      operationId: normalizeRtaFile
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        $ref: '#/components/requestBodies/RtaSyncRequest'
+      responses:
+        '200':
+          description: RTA file synced successfully
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RtaSyncResponse'
+        '400':
+          description: Any file-level failure fails the entire batch
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RtaSyncBatchErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/rta-sync/reconcile:
+    post:
+      tags:
+        - RTA Sync
+      summary: Reconcile normalized RTA batches
+      description: |
+        Compare a current normalized RTA batch with a previous normalized batch
+        supplied by the caller. The endpoint returns record-level classifications
+        for new, unchanged, changed, duplicate, reversed, removed, and unmatched
+        records. Removed classifications are emitted only for complete snapshot
+        comparisons. It does not retain either batch.
+      operationId: reconcileRta
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        $ref: '#/components/requestBodies/RtaReconciliationRequest'
+      responses:
+        '200':
+          description: RTA batches reconciled successfully
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RtaReconciliationResponse'
+        '400':
+          description: Invalid or incompatible normalized batches
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
           content:
             application/json:
               schema:
@@ -2425,6 +2518,17 @@ components:
         type: string
         pattern: '^req_[A-Za-z0-9]+$'
         example: "req_2xYz7KpL8mN3Ab"
+
+  parameters:
+    RequestID:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Optional caller-supplied request ID. Must start with `req_`; the same value is returned in the response header.
+      schema:
+        type: string
+        pattern: '^req_[A-Za-z0-9]+$'
+        example: req_myImport123
       
   requestBodies:
     CASParseRequest:
@@ -2463,6 +2567,77 @@ components:
                 type: string
                 description: Password for the PDF file (if required)
               
+    RtaSyncRequest:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+              - files
+              - reference
+            properties:
+              files:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+                  format: binary
+                description: One or more CAMS or KFintech RTA files in CSV, XLS, XLSX, or DBF format.
+              reference:
+                type: string
+                maxLength: 256
+                description: Opaque tenant, distributor, sub-distributor, or batch reference echoed in the response.
+              report_code:
+                type: [string, "null"]
+                description: Optional report identifier when all submitted files are the same report type.
+                example: MFSD221
+              provider:
+                type: string
+                enum: [auto, cams, kfintech]
+                default: auto
+                description: Optional provider hint. `auto` detects the provider schema from file headers.
+              include_source:
+                type: boolean
+                default: false
+                description: Include all original source fields in record provenance, including fields that were normalized.
+
+    RtaReconciliationRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - reference
+              - current
+              - previous
+              - scope
+            properties:
+              reference:
+                type: string
+                maxLength: 256
+                description: Consumer-owned tenant, distributor, or operation reference.
+                example: distributor_123
+              current:
+                $ref: '#/components/schemas/RtaSyncData'
+              previous:
+                $ref: '#/components/schemas/RtaSyncData'
+              scope:
+                $ref: '#/components/schemas/RtaReconciliationScope'
+              mapping_policy:
+                type: string
+                enum: [require_same, allow_compatible]
+                default: require_same
+                description: "require_same requires matching schema, key, and mapping versions; allow_compatible accepts versions declared compatible by RTA Sync."
+              object_types:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+                  enum: [investor, folio, scheme, transaction, position_snapshot, systematic_instruction, nav, corporate_action, exception, brokerage_payout, mandate, settlement_exception, analytics_report]
+                description: Optional object types to compare. Defaults to the union of types present in either batch.
+
     ContractNoteParseRequest:
       required: true
       content:
@@ -2526,6 +2701,9 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     Unauthorized:
       description: Unauthorized. This can happen if the `x-api-key` header is missing.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
       content:
         application/json:
           schema:
@@ -2535,6 +2713,9 @@ components:
             msg: "Authentication failed: API key is missing. Please provide a valid API key in the x-api-key header."
     Forbidden:
       description: Forbidden. This can happen if the API key is invalid or the quota has been exceeded.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
       content:
         application/json:
           schema:
@@ -2544,6 +2725,9 @@ components:
             msg: "Authentication failed: API quota exceeded or invalid API key. Please check your API key or quota limits."
     InternalError:
       description: Internal server error
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/X-Request-ID'
       content:
         application/json:
           schema:
@@ -2581,6 +2765,1510 @@ components:
           type: string
           description: A descriptive message explaining the error.
           example: "Invalid PDF file or password."
+
+    RtaReconciliationScope:
+      type: object
+      required:
+        - mode
+        - providers
+        - report_families
+        - current
+        - previous
+      properties:
+        mode:
+          type: string
+          enum: [event_stream, snapshot]
+          description: Event streams compare observed records; snapshots compare complete state as of a date.
+          example: snapshot
+        providers:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [cams, kfintech]
+        report_families:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+          description: Report families included in the comparison scope.
+        current:
+          $ref: '#/components/schemas/RtaReconciliationCoverage'
+        previous:
+          $ref: '#/components/schemas/RtaReconciliationCoverage'
+      allOf:
+        - if:
+            properties: {mode: {const: snapshot}}
+          then:
+            properties:
+              current:
+                allOf:
+                  - $ref: '#/components/schemas/RtaReconciliationCoverage'
+                  - required: [as_of_date]
+              previous:
+                allOf:
+                  - $ref: '#/components/schemas/RtaReconciliationCoverage'
+                  - required: [as_of_date]
+        - if:
+            properties: {mode: {const: event_stream}}
+          then:
+            properties:
+              current:
+                allOf:
+                  - $ref: '#/components/schemas/RtaReconciliationCoverage'
+                  - required: [period]
+              previous:
+                allOf:
+                  - $ref: '#/components/schemas/RtaReconciliationCoverage'
+                  - required: [period]
+
+    RtaReconciliationCoverage:
+      type: object
+      required:
+        - complete
+      properties:
+        complete:
+          type: boolean
+          description: Whether the batch is complete for the declared providers and report families.
+        period:
+          type: object
+          required: [from, to]
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        as_of_date:
+          type: string
+          format: date
+          description: Snapshot date when scope.mode is snapshot.
+
+    RtaReconciliationResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: success
+        data:
+          $ref: '#/components/schemas/RtaReconciliationData'
+
+    RtaReconciliationData:
+      type: object
+      required:
+        - reference
+        - scope
+        - mapping_policy
+        - results
+        - summary
+      properties:
+        reference:
+          type: string
+          example: distributor_123
+        scope:
+          $ref: '#/components/schemas/RtaReconciliationScope'
+        mapping_policy:
+          type: string
+          enum: [require_same, allow_compatible]
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaReconciliationResult'
+        summary:
+          $ref: '#/components/schemas/RtaReconciliationSummary'
+      allOf:
+        - if:
+            not:
+              properties:
+                scope:
+                  required: [mode, current, previous]
+                  properties:
+                    mode: {const: snapshot}
+                    current:
+                      properties: {complete: {const: true}}
+                    previous:
+                      properties: {complete: {const: true}}
+          then:
+            properties:
+              results:
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/RtaReconciliationResult'
+                    - properties:
+                        classification:
+                          enum: [new, unchanged, changed, duplicate, reversed, unmatched]
+              summary:
+                allOf:
+                  - $ref: '#/components/schemas/RtaReconciliationSummary'
+                  - properties: {removed_count: {const: 0}}
+
+    RtaReconciliationResult:
+      type: object
+      required:
+        - object_type
+        - classification
+      properties:
+        object_type:
+          $ref: '#/components/schemas/RtaSyncObjectType'
+        classification:
+          type: string
+          enum: [new, unchanged, changed, duplicate, reversed, removed, unmatched]
+          description: Removed is valid only for complete snapshot comparisons; duplicate means repeated identity within one comparison side; unmatched means identity is insufficient for pairing.
+          example: changed
+        current_record_key:
+          type: [string, "null"]
+          example: "kfintech:1227:0:91046479506:2026-01-15"
+        previous_record_key:
+          type: [string, "null"]
+          example: "kfintech:1227:0:91046479506:2026-01-15"
+        duplicate_of_record_key:
+          type: [string, "null"]
+          description: Record key duplicated on the same comparison side.
+        reversal_of_record_key:
+          type: [string, "null"]
+          description: Original record key reversed by the current record.
+        comparison_side:
+          type: [string, "null"]
+          enum: [current, previous, null]
+          description: Side containing a duplicate or unmatched record.
+        unmatched_reason:
+          type: [string, "null"]
+          description: Why the record could not be paired across batches.
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaFieldChange'
+        current_record:
+          anyOf:
+            - $ref: '#/components/schemas/RtaSyncRecord'
+            - type: "null"
+        previous_record:
+          anyOf:
+            - $ref: '#/components/schemas/RtaSyncRecord'
+            - type: "null"
+      allOf:
+        - if:
+            properties: {classification: {const: changed}}
+          then:
+            required: [current_record_key, previous_record_key, changes]
+            properties:
+              current_record_key: {type: string}
+              previous_record_key: {type: string}
+              changes: {minItems: 1}
+        - if:
+            properties: {classification: {const: new}}
+          then:
+            required: [current_record_key, current_record]
+            properties:
+              current_record_key: {type: string}
+              current_record: {$ref: '#/components/schemas/RtaSyncRecord'}
+        - if:
+            properties: {classification: {const: removed}}
+          then:
+            required: [previous_record_key, previous_record]
+            properties:
+              previous_record_key: {type: string}
+              previous_record: {$ref: '#/components/schemas/RtaSyncRecord'}
+        - if:
+            properties: {classification: {const: unchanged}}
+          then:
+            required: [current_record_key, previous_record_key]
+            properties:
+              current_record_key: {type: string}
+              previous_record_key: {type: string}
+        - if:
+            properties: {classification: {const: duplicate}}
+          then:
+            required: [duplicate_of_record_key, comparison_side]
+            properties:
+              duplicate_of_record_key: {type: string}
+              comparison_side: {type: string, enum: [current, previous]}
+            oneOf:
+              - required: [current_record_key]
+                properties:
+                  comparison_side: {const: current}
+                  current_record_key: {type: string}
+              - required: [previous_record_key]
+                properties:
+                  comparison_side: {const: previous}
+                  previous_record_key: {type: string}
+        - if:
+            properties: {classification: {const: reversed}}
+          then:
+            required: [current_record_key, reversal_of_record_key]
+            properties:
+              current_record_key: {type: string}
+              reversal_of_record_key: {type: string}
+        - if:
+            properties: {classification: {const: unmatched}}
+          then:
+            required: [comparison_side, unmatched_reason]
+            properties:
+              comparison_side: {type: string, enum: [current, previous]}
+              unmatched_reason: {type: string}
+            oneOf:
+              - required: [current_record_key]
+                properties:
+                  comparison_side: {const: current}
+                  current_record_key: {type: string}
+              - required: [previous_record_key]
+                properties:
+                  comparison_side: {const: previous}
+                  previous_record_key: {type: string}
+
+    RtaFieldChange:
+      type: object
+      required:
+        - field
+        - before
+        - after
+      properties:
+        field:
+          type: string
+          pattern: '^/'
+          description: RFC 6901 JSON Pointer to the changed field.
+          example: /amount
+        before:
+          $ref: '#/components/schemas/RtaChangeValue'
+          example: "1000.00"
+        after:
+          $ref: '#/components/schemas/RtaChangeValue'
+          example: "1002.50"
+
+    RtaChangeValue:
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+        - type: "null"
+
+    RtaReconciliationSummary:
+      type: object
+      required:
+        - total
+        - new_count
+        - unchanged_count
+        - changed_count
+        - duplicate_count
+        - reversed_count
+        - removed_count
+        - unmatched_count
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Total result classifications; equals the sum of all classification counts.
+          example: 1000
+        new_count:
+          type: integer
+          minimum: 0
+          example: 20
+        unchanged_count:
+          type: integer
+          minimum: 0
+          example: 950
+        changed_count:
+          type: integer
+          minimum: 0
+          example: 10
+        duplicate_count:
+          type: integer
+          minimum: 0
+          example: 5
+        reversed_count:
+          type: integer
+          minimum: 0
+          example: 3
+        removed_count:
+          type: integer
+          minimum: 0
+          description: Zero unless scope.mode is snapshot and both scope.current.complete and scope.previous.complete are true.
+          example: 2
+        unmatched_count:
+          type: integer
+          minimum: 0
+          example: 10
+
+    RtaSyncResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: success
+        data:
+          $ref: '#/components/schemas/RtaSyncData'
+
+    RtaSyncData:
+      type: object
+      required:
+        - schema_version
+        - key_version
+        - batch_key
+        - reference
+        - files
+        - summary
+        - warnings
+      properties:
+        schema_version:
+          type: string
+          description: Version of the canonical RTA Sync response contract.
+          example: rta-sync.v1
+        key_version:
+          type: string
+          description: Version of the deterministic record-key algorithm.
+          example: rta-key.v1
+        batch_key:
+          type: string
+          description: "Lowercase sha256 of UTF-8 bytes for schema_version + newline + key_version + newline + lexicographically sorted source_sha256:mapping_version pairs joined by newline. Duplicate pairs are preserved."
+          example: sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        reference:
+          type: string
+          description: Opaque tenant, distributor, sub-distributor, or batch reference echoed from the request.
+          example: jan-2026-mfd-001
+        files:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RtaSyncFileResult'
+        summary:
+          $ref: '#/components/schemas/RtaSyncBatchSummary'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncWarning'
+
+    RtaSyncBatchErrorResponse:
+      type: object
+      required:
+        - status
+        - reference
+        - errors
+      properties:
+        status:
+          type: string
+          enum: [failed]
+          example: failed
+        reference:
+          type: [string, "null"]
+          description: Client reference echoed when available.
+          example: distributor_123
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncFileError'
+
+    RtaSyncFileError:
+      type: object
+      required:
+        - file_index
+        - filename
+        - code
+        - message
+      properties:
+        file_index:
+          type: integer
+          minimum: 0
+          description: Zero-based upload position when the file was received.
+        filename:
+          type: string
+          example: aum-report.xlsx
+        code:
+          type: string
+          example: REPORT_DETECTION_AMBIGUOUS
+        message:
+          type: string
+          example: The report family could not be identified from the file headers.
+        fields:
+          type: array
+          items:
+            type: string
+
+    RtaSyncFileResult:
+      type: object
+      required:
+        - file_index
+        - filename
+        - provider
+        - report_code
+        - report_family
+        - detection_confidence
+        - source_sha256
+        - mapping_version
+        - source_schema
+        - data_sets
+        - rejected_rows
+        - summary
+        - warnings
+      properties:
+        file_index:
+          type: integer
+          minimum: 0
+          description: Zero-based upload position. File results preserve request order.
+          example: 0
+        filename:
+          type: string
+          example: kfintech-feed.csv
+        provider:
+          type: string
+          enum: [cams, kfintech]
+          example: kfintech
+        report_code:
+          type: [string, "null"]
+          description: Provider report identifier when detected or supplied.
+          example: MFSD221
+        report_family:
+          type: string
+          description: Normalized report family.
+          example: transaction_investor_master
+        detection_confidence:
+          type: string
+          enum: [strong, weak]
+          description: Ambiguous detection fails the batch instead of returning a successful file result.
+          example: strong
+        source_sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: SHA-256 hash of the source file bytes.
+          example: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        mapping_version:
+          type: string
+          description: Version of the RTA Sync mapping rules used for the file.
+          example: rta-sync-2026-08
+        source_schema:
+          type: string
+          description: Detected provider schema; this is stable source metadata, not an internal class name.
+          example: kfintech_format1
+        data_sets:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RtaSyncDataSet'
+        rejected_rows:
+          type: array
+          description: Every rejected source row appears once at file level.
+          items:
+            $ref: '#/components/schemas/RtaSyncRejectedRow'
+        summary:
+          $ref: '#/components/schemas/RtaSyncFileSummary'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncWarning'
+
+    RtaSyncDataSet:
+      oneOf:
+        - $ref: '#/components/schemas/RtaSyncInvestorDataSet'
+        - $ref: '#/components/schemas/RtaSyncFolioDataSet'
+        - $ref: '#/components/schemas/RtaSyncSchemeDataSet'
+        - $ref: '#/components/schemas/RtaSyncTransactionDataSet'
+        - $ref: '#/components/schemas/RtaSyncPositionSnapshotDataSet'
+        - $ref: '#/components/schemas/RtaSyncSystematicInstructionDataSet'
+        - $ref: '#/components/schemas/RtaSyncNavDataSet'
+        - $ref: '#/components/schemas/RtaSyncCorporateActionDataSet'
+        - $ref: '#/components/schemas/RtaSyncExceptionDataSet'
+        - $ref: '#/components/schemas/RtaSyncBrokeragePayoutDataSet'
+        - $ref: '#/components/schemas/RtaSyncMandateDataSet'
+        - $ref: '#/components/schemas/RtaSyncSettlementExceptionDataSet'
+        - $ref: '#/components/schemas/RtaSyncAnalyticsReportDataSet'
+      discriminator:
+        propertyName: object_type
+        mapping:
+          investor: '#/components/schemas/RtaSyncInvestorDataSet'
+          folio: '#/components/schemas/RtaSyncFolioDataSet'
+          scheme: '#/components/schemas/RtaSyncSchemeDataSet'
+          transaction: '#/components/schemas/RtaSyncTransactionDataSet'
+          position_snapshot: '#/components/schemas/RtaSyncPositionSnapshotDataSet'
+          systematic_instruction: '#/components/schemas/RtaSyncSystematicInstructionDataSet'
+          nav: '#/components/schemas/RtaSyncNavDataSet'
+          corporate_action: '#/components/schemas/RtaSyncCorporateActionDataSet'
+          exception: '#/components/schemas/RtaSyncExceptionDataSet'
+          brokerage_payout: '#/components/schemas/RtaSyncBrokeragePayoutDataSet'
+          mandate: '#/components/schemas/RtaSyncMandateDataSet'
+          settlement_exception: '#/components/schemas/RtaSyncSettlementExceptionDataSet'
+          analytics_report: '#/components/schemas/RtaSyncAnalyticsReportDataSet'
+
+    RtaSyncDataSetBase:
+      type: object
+      required:
+        - object_type
+        - record_count
+        - warnings
+      properties:
+        object_type:
+          $ref: '#/components/schemas/RtaSyncObjectType'
+        record_count:
+          type: integer
+          minimum: 0
+          description: Number of records in this data set; equals records.length.
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncWarning'
+
+    RtaSyncInvestorDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [investor]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncInvestorRecord'}}
+
+    RtaSyncFolioDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [folio]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncFolioRecord'}}
+
+    RtaSyncSchemeDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [scheme]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncSchemeRecord'}}
+
+    RtaSyncTransactionDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [transaction]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncTransactionRecord'}}
+
+    RtaSyncPositionSnapshotDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [position_snapshot]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncPositionSnapshotRecord'}}
+
+    RtaSyncSystematicInstructionDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [systematic_instruction]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncSystematicInstructionRecord'}}
+
+    RtaSyncNavDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [nav]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncNavRecord'}}
+
+    RtaSyncCorporateActionDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [corporate_action]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncCorporateActionRecord'}}
+
+    RtaSyncExceptionDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [exception]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncExceptionRecord'}}
+
+    RtaSyncBrokeragePayoutDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [brokerage_payout]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncBrokeragePayoutRecord'}}
+
+    RtaSyncMandateDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [mandate]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncMandateRecord'}}
+
+    RtaSyncSettlementExceptionDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [settlement_exception]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncSettlementExceptionRecord'}}
+
+    RtaSyncAnalyticsReportDataSet:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncDataSetBase'
+        - type: object
+          required: [records]
+          properties:
+            object_type: {type: string, enum: [analytics_report]}
+            records: {type: array, items: {$ref: '#/components/schemas/RtaSyncAnalyticsReportRecord'}}
+
+    RtaSyncObjectType:
+      type: string
+      enum: [investor, folio, scheme, transaction, position_snapshot, systematic_instruction, nav, corporate_action, exception, brokerage_payout, mandate, settlement_exception, analytics_report]
+
+    RtaSyncRecord:
+      oneOf:
+        - $ref: '#/components/schemas/RtaSyncInvestorRecord'
+        - $ref: '#/components/schemas/RtaSyncFolioRecord'
+        - $ref: '#/components/schemas/RtaSyncSchemeRecord'
+        - $ref: '#/components/schemas/RtaSyncTransactionRecord'
+        - $ref: '#/components/schemas/RtaSyncPositionSnapshotRecord'
+        - $ref: '#/components/schemas/RtaSyncSystematicInstructionRecord'
+        - $ref: '#/components/schemas/RtaSyncNavRecord'
+        - $ref: '#/components/schemas/RtaSyncCorporateActionRecord'
+        - $ref: '#/components/schemas/RtaSyncExceptionRecord'
+        - $ref: '#/components/schemas/RtaSyncBrokeragePayoutRecord'
+        - $ref: '#/components/schemas/RtaSyncMandateRecord'
+        - $ref: '#/components/schemas/RtaSyncSettlementExceptionRecord'
+        - $ref: '#/components/schemas/RtaSyncAnalyticsReportRecord'
+      discriminator:
+        propertyName: record_type
+        mapping:
+          investor: '#/components/schemas/RtaSyncInvestorRecord'
+          folio: '#/components/schemas/RtaSyncFolioRecord'
+          scheme: '#/components/schemas/RtaSyncSchemeRecord'
+          transaction: '#/components/schemas/RtaSyncTransactionRecord'
+          position_snapshot: '#/components/schemas/RtaSyncPositionSnapshotRecord'
+          systematic_instruction: '#/components/schemas/RtaSyncSystematicInstructionRecord'
+          nav: '#/components/schemas/RtaSyncNavRecord'
+          corporate_action: '#/components/schemas/RtaSyncCorporateActionRecord'
+          exception: '#/components/schemas/RtaSyncExceptionRecord'
+          brokerage_payout: '#/components/schemas/RtaSyncBrokeragePayoutRecord'
+          mandate: '#/components/schemas/RtaSyncMandateRecord'
+          settlement_exception: '#/components/schemas/RtaSyncSettlementExceptionRecord'
+          analytics_report: '#/components/schemas/RtaSyncAnalyticsReportRecord'
+
+    RtaSyncRejectedRow:
+      type: object
+      required:
+        - source_row
+        - code
+        - message
+      properties:
+        source_row:
+          $ref: '#/components/schemas/RtaSyncSourceRowRef'
+        source_fields:
+          type: object
+          additionalProperties: true
+          description: Original row fields when include_source is true.
+        code:
+          type: string
+          example: MISSING_REQUIRED_FIELD
+        message:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+
+    RtaSyncDecimal:
+      type: string
+      pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+      description: Non-negative decimal encoded as a string. Direction is represented by the record action/effect, not the numeric sign.
+      example: "1002.50"
+
+    RtaSyncProvenance:
+      type: object
+      required:
+        - source_rows
+      properties:
+        source_rows:
+          type: array
+          minItems: 1
+          description: One or more source rows that produced the canonical record.
+          items:
+            $ref: '#/components/schemas/RtaSyncSourceRowRef'
+        source_fields:
+          type: object
+          additionalProperties: true
+          description: Original source fields when include_source is true.
+
+    RtaSyncSourceRowRef:
+      type: object
+      required:
+        - row_number
+      properties:
+        row_number:
+          type: integer
+          minimum: 1
+          example: 2
+        sheet:
+          type: [string, "null"]
+          description: Worksheet or DBF table name when applicable.
+        source_row_key:
+          type: [string, "null"]
+          description: Stable provider row reference when available.
+
+    RtaSyncRelation:
+      type: object
+      required:
+        - type
+        - record_key
+      properties:
+        type:
+          type: string
+          enum: [reverses, supersedes, switch_pair, transfer_pair, derives_from]
+        record_key:
+          type: string
+          description: Related canonical record key.
+
+    RtaSyncTransactionRecord:
+      type: object
+      description: Canonical transaction record produced by RTA Sync.
+      required:
+        - record_type
+        - record_key
+        - folio_number
+        - scheme_code
+        - transaction_date
+        - units
+        - amount
+        - action
+        - action_tag
+        - effect
+        - cash_effect
+        - currency
+        - transaction_status
+        - is_reversal
+        - identity_quality
+        - provenance
+        - relations
+        - warnings
+      properties:
+        record_type:
+          type: string
+          enum: [transaction]
+        record_key:
+          type: string
+          description: Object-specific canonical identity. Investor, folio, and scheme keys are independent of report family; event keys use provider source identity. Stable under the declared key_version.
+          example: "kfintech:1227:0:91046479506:2026-01-15"
+        source_record_key:
+          type: [string, "null"]
+          description: Provider-native event identity before canonical key construction.
+          example: BSE000123
+        folio_number:
+          type: string
+          example: "91046479506"
+        product_code:
+          type: [string, "null"]
+          example: HDFC
+        scheme_code:
+          type: string
+          example: HDFC0001
+        transaction_id:
+          type: [string, "null"]
+          description: Provider transaction or order ID.
+          example: BSE000123
+        transaction_number:
+          type: [string, "null"]
+          example: "1227"
+        parent_transaction_number:
+          type: [string, "null"]
+          description: Parent transaction reference when supplied by the provider.
+          example: null
+        transaction_date:
+          type: string
+          format: date
+          example: "2026-01-15"
+        nav_date:
+          type: [string, "null"]
+          format: date
+        processing_date:
+          type: [string, "null"]
+          format: date
+        nav:
+          type: [string, "null"]
+          pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+          description: Decimal NAV represented as a string to preserve precision.
+          example: "100.25"
+        units:
+          type: [string, "null"]
+          pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+          description: Decimal unit quantity represented as a string to preserve precision.
+          example: "10.000000"
+        amount:
+          type: [string, "null"]
+          pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+          description: Decimal transaction amount represented as a string to preserve precision.
+          example: "1002.50"
+        transaction_type:
+          type: [string, "null"]
+          description: Original provider transaction type.
+          example: P
+        action:
+          type: string
+          enum: [buy, sell, no_effect]
+          example: buy
+        action_tag:
+          type: string
+          description: Canonical detail for the action.
+          example: purchase
+        effect:
+          type: string
+          enum: [increase_units, decrease_units, no_effect]
+          description: Ledger effect after applying reversal semantics.
+          example: increase_units
+        cash_effect:
+          type: string
+          enum: [cash_inflow, cash_outflow, no_effect, unknown]
+          description: Canonical cash direction after applying reversal semantics.
+          example: cash_outflow
+        currency:
+          type: string
+          enum: [INR]
+          example: INR
+        transaction_status:
+          type: string
+          enum: [successful, reversed, pending, failed, unknown]
+          example: successful
+        transaction_mode:
+          type: [string, "null"]
+          example: N
+        is_reversal:
+          type: boolean
+          example: false
+        reversal_resolution:
+          type: [string, "null"]
+          enum: [resolved, unresolved, null]
+          description: Resolution state for a reversal. Null on non-reversal records.
+        pan:
+          type: [string, "null"]
+          example: ABCDE1234F
+        investor_name:
+          type: [string, "null"]
+          example: Example Investor
+        broker_code:
+          type: [string, "null"]
+          example: ARN-12345
+        sub_broker_code:
+          type: [string, "null"]
+          description: Sub-distributor code when supplied by the source.
+          example: null
+        euin:
+          type: [string, "null"]
+          description: Employee Unique Identification Number when supplied by the source.
+          example: null
+        identity_quality:
+          type: string
+          enum: [strong, weak, ambiguous]
+          example: strong
+        provenance:
+          $ref: '#/components/schemas/RtaSyncProvenance'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncRelation'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncWarning'
+      allOf:
+        - if:
+            properties:
+              effect:
+                enum: [increase_units, decrease_units]
+          then:
+            properties:
+              units:
+                type: string
+        - if:
+            properties:
+              cash_effect:
+                enum: [cash_inflow, cash_outflow]
+          then:
+            properties:
+              amount:
+                type: string
+        - if:
+            properties:
+              action: {const: no_effect}
+          then:
+            properties:
+              effect: {const: no_effect}
+              cash_effect: {enum: [no_effect, unknown]}
+        - if:
+            properties:
+              action: {const: buy}
+              is_reversal: {const: false}
+              transaction_status: {const: successful}
+          then:
+            properties:
+              effect: {const: increase_units}
+              cash_effect: {enum: [cash_outflow, no_effect, unknown]}
+        - if:
+            properties:
+              action: {const: buy}
+              is_reversal: {const: true}
+              transaction_status: {const: reversed}
+          then:
+            properties:
+              effect: {const: decrease_units}
+              cash_effect: {enum: [cash_inflow, no_effect, unknown]}
+        - if:
+            properties:
+              action: {const: sell}
+              is_reversal: {const: false}
+              transaction_status: {const: successful}
+          then:
+            properties:
+              effect: {const: decrease_units}
+              cash_effect: {enum: [cash_inflow, no_effect, unknown]}
+        - if:
+            properties:
+              action: {const: sell}
+              is_reversal: {const: true}
+              transaction_status: {const: reversed}
+          then:
+            properties:
+              effect: {const: increase_units}
+              cash_effect: {enum: [cash_outflow, no_effect, unknown]}
+        - if:
+            properties:
+              is_reversal: {const: true}
+          then:
+            required: [reversal_resolution]
+            properties:
+              reversal_resolution:
+                type: string
+                enum: [resolved, unresolved]
+              transaction_status: {const: reversed}
+        - if:
+            properties:
+              is_reversal: {const: false}
+          then:
+            properties:
+              reversal_resolution: {type: "null"}
+              transaction_status:
+                enum: [successful, pending, failed, unknown]
+        - if:
+            properties:
+              transaction_status:
+                enum: [pending, failed]
+          then:
+            properties:
+              effect: {const: no_effect}
+              cash_effect: {const: no_effect}
+        - if:
+            properties:
+              transaction_status: {const: unknown}
+          then:
+            properties:
+              effect: {const: no_effect}
+              cash_effect: {enum: [no_effect, unknown]}
+        - if:
+            properties:
+              reversal_resolution: {const: resolved}
+          then:
+            properties:
+              relations:
+                contains:
+                  type: object
+                  required: [type, record_key]
+                  properties:
+                    type: {const: reverses}
+                    record_key: {type: string}
+        - if:
+            properties:
+              reversal_resolution: {const: unresolved}
+          then:
+            properties:
+              warnings:
+                contains:
+                  type: object
+                  required: [code, message]
+                  properties:
+                    code: {const: UNMATCHED_REVERSAL}
+                    message: {type: string}
+
+    RtaSyncRecordBase:
+      type: object
+      required:
+        - record_type
+        - record_key
+        - identity_quality
+        - provenance
+        - relations
+        - warnings
+      properties:
+        record_type:
+          $ref: '#/components/schemas/RtaSyncObjectType'
+        record_key:
+          type: string
+          description: Object-specific canonical identity. Entity keys are report-family independent; event keys include provider source identity.
+        source_record_key:
+          type: [string, "null"]
+          description: Provider-native row or event identity before canonical key construction.
+        identity_quality:
+          type: string
+          enum: [strong, weak, ambiguous]
+        provenance:
+          $ref: '#/components/schemas/RtaSyncProvenance'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncRelation'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/RtaSyncWarning'
+
+    RtaSyncInvestorRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          anyOf:
+            - required: [pan]
+              properties:
+                pan:
+                  type: string
+            - required: [investor_name]
+              properties:
+                investor_name:
+                  type: string
+          properties:
+            record_type:
+              type: string
+              enum: [investor]
+            pan:
+              type: [string, "null"]
+            investor_name:
+              type: [string, "null"]
+            email:
+              type: [string, "null"]
+            mobile:
+              type: [string, "null"]
+            kyc_status:
+              type: [string, "null"]
+            broker_code:
+              type: [string, "null"]
+            sub_broker_code:
+              type: [string, "null"]
+            euin:
+              type: [string, "null"]
+
+    RtaSyncFolioRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [folio_number]
+          properties:
+            record_type:
+              type: string
+              enum: [folio]
+            folio_number:
+              type: string
+            pan:
+              type: [string, "null"]
+            investor_name:
+              type: [string, "null"]
+            amc_code:
+              type: [string, "null"]
+            folio_status:
+              type: [string, "null"]
+            broker_code:
+              type: [string, "null"]
+            sub_broker_code:
+              type: [string, "null"]
+            euin:
+              type: [string, "null"]
+
+    RtaSyncSchemeRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [scheme_code]
+          properties:
+            record_type:
+              type: string
+              enum: [scheme]
+            scheme_code:
+              type: string
+            amc_code:
+              type: [string, "null"]
+            isin:
+              type: [string, "null"]
+            scheme_name:
+              type: [string, "null"]
+            plan_type:
+              type: [string, "null"]
+            option:
+              type: [string, "null"]
+
+    RtaSyncPositionSnapshotRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [as_of_date, folio_number, scheme_code, currency]
+          anyOf:
+            - required: [units]
+            - required: [market_value]
+          properties:
+            record_type:
+              type: string
+              enum: [position_snapshot]
+            as_of_date:
+              type: string
+              format: date
+            folio_number:
+              type: string
+            scheme_code:
+              type: string
+            units:
+              $ref: '#/components/schemas/RtaSyncDecimal'
+            nav:
+              $ref: '#/components/schemas/RtaSyncDecimal'
+            market_value:
+              $ref: '#/components/schemas/RtaSyncDecimal'
+            cost_value:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncSystematicInstructionRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [instruction_type, folio_number, status, currency]
+          anyOf:
+            - required: [amount]
+              properties:
+                amount:
+                  type: string
+            - required: [units]
+              properties:
+                units:
+                  type: string
+          properties:
+            record_type:
+              type: string
+              enum: [systematic_instruction]
+            instruction_id:
+              type: [string, "null"]
+            instruction_type:
+              type: string
+              enum: [sip, stp, swp]
+            folio_number:
+              type: string
+            scheme_code:
+              type: [string, "null"]
+            amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            units:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            frequency:
+              type: [string, "null"]
+            start_date:
+              type: [string, "null"]
+              format: date
+            end_date:
+              type: [string, "null"]
+              format: date
+            status:
+              type: string
+            mandate_reference:
+              type: [string, "null"]
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncNavRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [scheme_code, nav_date, nav, currency]
+          properties:
+            record_type:
+              type: string
+              enum: [nav]
+            scheme_code:
+              type: string
+            nav_date:
+              type: string
+              format: date
+            nav:
+              $ref: '#/components/schemas/RtaSyncDecimal'
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncCorporateActionRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [action_type, scheme_code, event_date, currency]
+          properties:
+            record_type:
+              type: string
+              enum: [corporate_action]
+            action_type:
+              type: string
+              enum: [dividend, bonus]
+            scheme_code:
+              type: string
+            event_date:
+              type: string
+              format: date
+            rate:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncExceptionRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [exception_type, status]
+          properties:
+            record_type:
+              type: string
+              enum: [exception]
+            exception_type:
+              type: string
+            status:
+              type: string
+            reason_code:
+              type: [string, "null"]
+            reason:
+              type: [string, "null"]
+            related_record_key:
+              type: [string, "null"]
+            folio_number:
+              type: [string, "null"]
+
+    RtaSyncBrokeragePayoutRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [broker_code, currency]
+          anyOf:
+            - required: [gross_amount]
+              properties:
+                gross_amount:
+                  type: string
+            - required: [net_amount]
+              properties:
+                net_amount:
+                  type: string
+            - required: [clawback_amount]
+              properties:
+                clawback_amount:
+                  type: string
+          properties:
+            record_type:
+              type: string
+              enum: [brokerage_payout]
+            broker_code:
+              type: string
+            sub_broker_code:
+              type: [string, "null"]
+            euin:
+              type: [string, "null"]
+            scheme_code:
+              type: [string, "null"]
+            payout_date:
+              type: [string, "null"]
+              format: date
+            gross_amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            tds_amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            net_amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            clawback_amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            instrument_reference:
+              type: [string, "null"]
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncMandateRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [status, currency]
+          anyOf:
+            - required: [mandate_reference]
+              properties:
+                mandate_reference:
+                  type: string
+            - required: [folio_number]
+              properties:
+                folio_number:
+                  type: string
+          properties:
+            record_type:
+              type: string
+              enum: [mandate]
+            mandate_reference:
+              type: [string, "null"]
+            folio_number:
+              type: [string, "null"]
+            status:
+              type: string
+            amount_limit:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            start_date:
+              type: [string, "null"]
+              format: date
+            end_date:
+              type: [string, "null"]
+              format: date
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncSettlementExceptionRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [exception_type, status, currency]
+          properties:
+            record_type:
+              type: string
+              enum: [settlement_exception]
+            exception_type:
+              type: string
+            status:
+              type: string
+            amount:
+              type: [string, "null"]
+              pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$'
+            instrument_reference:
+              type: [string, "null"]
+            reason:
+              type: [string, "null"]
+            currency:
+              type: string
+              enum: [INR]
+
+    RtaSyncAnalyticsReportRecord:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncRecordBase'
+        - type: object
+          required: [report_name, metrics]
+          properties:
+            record_type:
+              type: string
+              enum: [analytics_report]
+            report_name:
+              type: string
+            period:
+              type: [object, "null"]
+              additionalProperties: true
+            dimensions:
+              type: object
+              additionalProperties: true
+            metrics:
+              type: object
+              additionalProperties: true
+
+    RtaSyncFileSummary:
+      type: object
+      required:
+        - source_rows
+        - output_records
+        - rejected_rows
+        - warning_count
+      properties:
+        source_rows:
+          type: integer
+          minimum: 0
+          example: 1000
+        output_records:
+          type: integer
+          minimum: 0
+          example: 998
+        rejected_rows:
+          type: integer
+          minimum: 0
+          example: 2
+        warning_count:
+          type: integer
+          minimum: 0
+          example: 4
+
+    RtaSyncBatchSummary:
+      allOf:
+        - $ref: '#/components/schemas/RtaSyncFileSummary'
+        - type: object
+          required: [input_files]
+          properties:
+            input_files:
+              type: integer
+              minimum: 1
+              example: 1
+
+    RtaSyncWarning:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        row_number:
+          type: [integer, "null"]
+          minimum: 1
+          example: 42
+        code:
+          type: string
+          example: MISSING_TRANSACTION_ID
+        message:
+          type: string
+          example: "The source row has no provider transaction ID; record identity may be weak."
+        fields:
+          type: array
+          items:
+            type: string
+          example: [transaction_id]
+
     SebiVerifyResponse:
       type: object
       description: >-
