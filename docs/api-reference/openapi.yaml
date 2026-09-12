@@ -2566,7 +2566,7 @@ components:
               password:
                 type: string
                 description: Password for the PDF file (if required)
-              
+
     RtaSyncRequest:
       required: true
       content:
