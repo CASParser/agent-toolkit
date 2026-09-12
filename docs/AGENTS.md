@@ -34,6 +34,7 @@ docs/
 │   └── configuration.mdx
 ├── guides/                      # Product guides (Knowledge Base tab)
 │   ├── parsing.mdx              # CAS PDF parsing
+│   ├── rta-sync.mdx             # CAMS/KFintech RTA file sync
 │   ├── contract-notes.mdx       # Broker contract notes
 │   ├── cas-generator.mdx        # KFintech email request
 │   ├── gmail-inbox.mdx          # OAuth inbox import

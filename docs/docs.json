@@ -96,6 +96,7 @@
             "group": "Product Guides",
             "pages": [
               "guides/parsing",
+              "guides/rta-sync",
               "guides/contract-notes",
               "guides/cas-generator",
               "guides/gmail-inbox",
