@@ -164,6 +164,7 @@
     "options": [
       "copy",
       "view",
+      "download-spec",
       "assistant",
       "chatgpt",
       "claude",
