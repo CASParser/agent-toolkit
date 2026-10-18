@@ -426,6 +426,9 @@ paths:
         By default, a **Detailed CAS** is generated, which includes the complete transaction history.
         The parsing layer supports all statement types (Detailed, Summary, etc.), but generation
         always requests the Detailed variant for maximum data coverage.
+
+        `cas_authority` picks which RTA sends the email. The portfolio data is the same either
+        way — only the PDF password policy differs. With `cams`, a PAN is a valid password.
       operationId: generateCas
       security:
         - ApiKeyAuth: []
@@ -458,8 +461,18 @@ paths:
                   example: "2023-12-31"
                 password:
                   type: string
-                  description: Password for the PDF
+                  description: >-
+                    Password protecting the emailed PDF. Must satisfy the chosen authority's
+                    policy — `cams` requires 6-20 characters with at least two digits, so a PAN works.
                   example: "Abcdefghi12$"
+                cas_authority:
+                  type: string
+                  description: RTA that sends the mailback. Affects only the password policy, not the portfolio data returned.
+                  enum:
+                    - kfintech
+                    - cams
+                  default: kfintech
+                  example: "cams"
       responses:
         '200':
           description: Request submitted successfully

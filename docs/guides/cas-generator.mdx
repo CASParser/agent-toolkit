@@ -7,7 +7,7 @@ description: Request mutual fund CAS statements programmatically. Get 50+ years 
 
 CAS Generator triggers a mutual fund CAS statement to be emailed to your user — no manual portal visits needed.
 
-**Coverage:** Uses KFintech's email mailback service. KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs** (Registrar and Transfer Agents), covering all mutual funds in India.
+**Coverage:** Uses the KFintech or CAMS email mailback service. KFintech and CAMS have a mutual partnership for data sharing and consolidation, so either one retrieves mutual fund data from **both RTAs** (Registrar and Transfer Agents), covering all mutual funds in India.
 
 **Statement type:** By default, a **Detailed CAS** is generated, which includes the complete transaction history. The parsing layer supports all statement types (Detailed, Summary, etc.), but generation always requests the Detailed variant for maximum data coverage.
 
@@ -55,12 +55,48 @@ data = response.json()
 | `pan_no` | No | User's PAN number (optional) |
 | `from_date` | Yes | Start date (YYYY-MM-DD) |
 | `to_date` | Yes | End date (YYYY-MM-DD) |
-| `password` | Yes | Password for the PDF |
-| `cas_authority` | No | Which RTA portal drives the mailback. Defaults to `kfintech`. `cams` is **Beta** — use it when the investor's mutual funds are serviced primarily by CAMS. |
+| `password` | Yes | Password that protects the emailed PDF. Must satisfy the chosen authority's policy — see below. |
+| `cas_authority` | No | Which RTA sends the mailback: `kfintech` (default) or `cams`. Case-insensitive. |
+
+## Choosing the CAS authority
+
+`cas_authority` decides **which RTA sends the email** — nothing else.
+
+You get the **same portfolio** either way. KFintech and CAMS share folio data with each other, so both authorities report the investor's holdings and transactions across every AMC in India. Switching authorities will not surface folios the other one missed, and will not change the fields you get back after parsing.
+
+What it *does* change is the **PDF password policy**, because each RTA enforces its own rule on the self-extraction password:
+
+| Authority | Password policy | Can you use the PAN? |
+|-----------|-----------------|----------------------|
+| `kfintech` (default) | KFintech's portal policy — stricter, expects a mix of upper and lowercase letters, digits and a special character | No |
+| `cams` | 6-20 characters containing at least two digits | **Yes** |
+
+### Why the CAMS password rule matters
+
+A PAN like `ABCDE1234F` is 10 characters with four digits, so it satisfies the CAMS rule. That means you can set the password **to the investor's PAN**:
+
+```python
+requests.post(
+    "https://api.casparser.in/v4/generate",
+    headers={"x-api-key": "YOUR_API_KEY"},
+    json={
+        "email": "investor@example.com",
+        "pan_no": "ABCDE1234F",
+        "from_date": "1990-01-01",
+        "to_date": "2024-01-15",
+        "password": "ABCDE1234F",   # PAN doubles as the PDF password
+        "cas_authority": "cams",
+    },
+)
+```
+
+This removes a whole piece of state from your integration. With `kfintech` you have to invent a password, store it against the user, and look it up again when the PDF arrives so you can pass it to `/v4/smart/parse`. With `cams` the password is derivable from data you already hold.
 
 <Note>
-  `cas_authority: "cams"` is in **Beta**. The default (`kfintech`) is GA and already retrieves mutual fund data from both RTAs via the KFintech–CAMS data-sharing partnership. Only switch to `cams` when you specifically need the statement sourced from the CAMS portal.
+  The password is **not** validated against the investor's real PAN by the RTA — it is just a string that locks the PDF. Using the PAN is a convention that makes the password predictable to you, not an authentication step.
 </Note>
+
+If you don't already collect PAN, or you'd rather not reuse it as a password, stay on the default `kfintech`.
 
 ## Integration patterns
 

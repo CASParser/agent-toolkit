@@ -41,14 +41,13 @@ The resolved `provider` is returned in the connect response and reported by `POS
 
 ---
 
-### CAS Generator — `cas_authority: "cams"` (Beta)
+### CAS Generator — `cas_authority: "cams"`
 
-`POST /v4/generate` now accepts a `cas_authority` parameter to select which RTA portal drives the mailback.
+`POST /v4/generate` now accepts a `cas_authority` parameter to select which RTA sends the mailback: `kfintech` (default) or `cams`.
 
-- `kfintech` (default, GA) — retrieves mutual fund data from both RTAs via the KFintech–CAMS data-sharing partnership
-- `cams` (**Beta**) — drives the mailback through the CAMS portal directly. Use this when the investor's mutual funds are serviced primarily by CAMS
+This only changes the sender, not the data — both RTAs share folio data, so either authority returns the same consolidated portfolio. What it does change is the PDF password policy: CAMS accepts 6-20 characters with at least two digits, so you can use the investor's **PAN as the password** and skip storing a separate secret to reopen the PDF at parse time.
 
-The default behaviour is unchanged. Only switch to `cams` when you specifically need the statement sourced from the CAMS portal.
+The default behaviour is unchanged.
 
 **Start here:** [CAS Generator Guide](/guides/cas-generator)
 
