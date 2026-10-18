@@ -64,9 +64,9 @@ The user signs in via the browser and clicks Approve. The API key is delivered o
 - KFintech and CAMS have a mutual partnership for data sharing and consolidation, so this endpoint retrieves mutual fund data from **both RTAs**, covering all mutual funds in India.
 - This is not an instant operation.
 - By default, a **Detailed CAS** is generated (complete transaction history). The parsing layer supports all statement types, but generation always requests the Detailed variant.
-- `cas_authority` selects which RTA portal drives the mailback (defaults to `kfintech`):
-  - `kfintech` — GA. Retrieves mutual fund data from both RTAs via the KFintech mailback service.
-  - `cams` — **Beta**. Drives the mailback through the CAMS portal directly. Use this when the investor's mutual funds are serviced primarily by CAMS.
+- `cas_authority` selects which RTA sends the mailback (defaults to `kfintech`; case-insensitive). It **only** determines the sender — you get the investor's full portfolio either way, since KFintech and CAMS share folio data. Any other value returns `400`.
+  - The real difference is the **PDF password policy**. `cams` requires 6-20 characters with at least two digits, so an investor's PAN (e.g. `ABCDE1234F`) is a valid `password` — you don't have to generate and store a separate secret to reopen the PDF at parse time. `kfintech` enforces a stricter policy that a PAN does not satisfy.
+  - Do **not** pick an authority hoping to find folios the other one missed; it won't.
 
 ### Email Import (OAuth)
 - This is a **multi-step OAuth flow**:

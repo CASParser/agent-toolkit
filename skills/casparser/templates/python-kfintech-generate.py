@@ -35,12 +35,14 @@ def generate_kfintech_cas(
         email: Investor's email to receive the CAS
         from_date: Start date (YYYY-MM-DD)
         to_date: End date (YYYY-MM-DD)
-        password: Password for the generated PDF
+        password: Password protecting the generated PDF. Must satisfy the chosen
+            authority's policy — CAMS requires 6-20 chars with at least two digits,
+            so a PAN works there; KFintech's policy is stricter.
         pan_no: PAN number (optional)
-        cas_authority: RTA portal to drive the mailback — "kfintech" (default, GA)
-            or "cams" (Beta). KFintech already retrieves data from both RTAs via
-            the KFintech–CAMS data-sharing partnership; use "cams" only when you
-            specifically need the statement sourced from the CAMS portal.
+        cas_authority: Which RTA sends the mailback — "kfintech" (default) or
+            "cams". This only picks the sender; both RTAs share folio data, so you
+            get the same portfolio either way. Choose "cams" if you want to use the
+            investor's PAN as the PDF password instead of storing a separate secret.
 
     Returns:
         Response dict with status and message.
