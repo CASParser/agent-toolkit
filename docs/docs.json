@@ -38,7 +38,8 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart"
+              "quickstart",
+              "use-cases"
             ]
           },
           {
@@ -54,6 +55,7 @@
             "pages": [
               "learn/authentication",
               "learn/response-schema",
+              "learn/credits",
               "learn/error-handling"
             ]
           },
@@ -90,22 +92,37 @@
         ]
       },
       {
-        "tab": "Knowledge Base",
+        "tab": "Guides",
         "groups": [
           {
-            "group": "Product Guides",
+            "group": "Parsing",
             "pages": [
               "guides/parsing",
               "guides/rta-sync",
-              "guides/contract-notes",
+              "guides/contract-notes"
+            ]
+          },
+          {
+            "group": "Retrieval",
+            "pages": [
               "guides/cas-generator",
+              "guides/cdsl-fetch",
               "guides/gmail-inbox",
               "guides/inbound-email",
-              "guides/portfolio-links",
-              "guides/cdsl-fetch",
+              "guides/portfolio-links"
+            ]
+          },
+          {
+            "group": "Identity",
+            "pages": [
               "guides/kyc-pan-status",
               "guides/kyc-digilocker",
-              "guides/verify",
+              "guides/verify"
+            ]
+          },
+          {
+            "group": "Agent Tooling",
+            "pages": [
               "guides/mcp-server"
             ]
           },
@@ -113,7 +130,6 @@
             "group": "Resources",
             "pages": [
               "knowledge-base/faq",
-              "knowledge-base/use-cases",
               "knowledge-base/on-premise"
             ]
           }
@@ -151,6 +167,13 @@
       ]
     }
   },
+  "redirects": [
+    {
+      "source": "/knowledge-base/use-cases",
+      "destination": "/use-cases",
+      "permanent": true
+    }
+  ],
   "footer": {
     "socials": {
       "github": "https://github.com/CASParser",
