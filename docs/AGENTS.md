@@ -40,9 +40,10 @@ docs/
 │   ├── gmail-inbox.mdx          # OAuth inbox import
 │   ├── cdsl-fetch.mdx           # OTP-based fetch
 │   └── mcp-server.mdx           # AI agent MCP integration
-├── knowledge-base/              # FAQ & use cases (Knowledge Base tab)
+├── use-cases.mdx                # Use cases (Documentation tab)
+├── knowledge-base/              # FAQ & on-premise (Guides tab)
 │   ├── faq.mdx
-│   └── use-cases.mdx
+│   └── on-premise.mdx
 ├── release-notes.mdx            # Changelog (separate tab)
 ├── docs.json                    # Mintlify config
 └── logo/, images/               # Assets
@@ -51,10 +52,10 @@ docs/
 ## Navigation Structure
 
 **5 Tabs:**
-1. **Documentation** — Getting Started, Quickstart, Learn, Resources
+1. **Documentation** — Getting Started (incl. use cases), Quickstart, Learn, Resources
 2. **API Reference** — Auto-generated from OpenAPI (all endpoints)
 3. **Portfolio Connect SDK** — Frontend widget documentation
-4. **Knowledge Base** — Product guides, FAQ, use cases
+4. **Guides** — Product guides grouped as Parsing / Retrieval / Identity / Agent Tooling, plus FAQ
 5. **Release Notes** — Changelog and updates
 
 ## Key Endpoints

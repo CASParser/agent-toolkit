@@ -13,6 +13,48 @@ flowchart LR
     B --> C[Unified JSON<br/>Response]
 ```
 
+## Choosing how to get the CAS
+
+Parsing is the last step. Before it, you need the PDF — and there are six ways to get one. They differ in what you ask the investor to do, not in the data you end up with.
+
+```mermaid
+quadrantChart
+    title Investor effort vs data coverage
+    x-axis "Less effort for the investor" --> "More effort"
+    y-axis "Mutual funds only" --> "All asset classes"
+    quadrant-1 "Broad, but asks more"
+    quadrant-2 "Broad and easy"
+    quadrant-3 "Narrow and easy"
+    quadrant-4 "Narrow, asks more"
+    "Portfolio Links": [0.10, 0.80]
+    "Inbound email": [0.20, 0.86]
+    "PDF upload": [0.30, 0.80]
+    "Email inbox import": [0.42, 0.86]
+    "CAS Generator": [0.58, 0.20]
+    "CDSL OTP Fetch": [0.88, 0.92]
+```
+
+Most methods sit in the top-left: broad coverage without asking much of the investor. The four file-based methods — upload, Portfolio Links, inbound email and inbox import — cover exactly the same assets, namely whatever CAS the investor provides; they are offset only so the labels stay legible. The two worth singling out are **CDSL OTP Fetch**, which asks the most but is the only one returning holdings without the investor touching a file, and **CAS Generator**, which covers mutual funds only.
+
+| Method | What the investor does | Speed | Assets covered | Credits |
+|---|---|---|---|---|
+| [PDF upload](/guides/parsing) | Uploads a CAS they already hold | Instant | Whatever that CAS covers | 1.0 |
+| [CDSL OTP Fetch](/guides/cdsl-fetch) | Enters PAN, BO ID, DOB, then an OTP | ~20 s | Demat + non-demat, CDSL **and** NSDL | 0.5 + 1.0 to parse |
+| [CAS Generator](/guides/cas-generator) | Nothing — statement is emailed to them | 1–2 min, then email | Mutual funds, both RTAs, 50+ yrs | 0.5 + 1.0 to parse |
+| [Email inbox import](/guides/gmail-inbox) | Grants read-only inbox access | Seconds | Any CAS already in their inbox | 0.2/pull + 1.0 to parse |
+| [Inbound email](/guides/inbound-email) | Forwards the CAS email to an address | Seconds | Any CAS they can forward | 0.2 + 1.0 to parse |
+| [Portfolio Links](/guides/portfolio-links) | Visits a branded link and uploads | Instant | Whatever that CAS covers | 0.2 per submission |
+
+<Tip>
+  **Lowest friction first.** If the investor is already in your app with the file, upload wins. If they don't have it, inbound email asks least of them — forwarding an email needs no OAuth consent and no BO ID lookup.
+</Tip>
+
+<Note>
+  CDSL OTP Fetch is the only method that returns holdings **without** the investor handling a file, which is why it suits credit underwriting — the data comes straight from the depository and can't be substituted.
+</Note>
+
+See [pricing](https://casparser.in/pricing) for plans and volume tiers.
+
 ## Supported CAS types
 
 | Source | Format | Password | Coverage |
