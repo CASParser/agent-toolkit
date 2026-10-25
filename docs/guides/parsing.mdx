@@ -18,16 +18,23 @@ flowchart LR
 Parsing is the last step. Before it, you need the PDF — and there are six ways to get one. They differ in what you ask the investor to do, not in the data you end up with.
 
 ```mermaid
-flowchart TD
-    Q1{Does the investor<br/>already have the PDF?} -->|Yes| Upload[PDF upload]
-    Q1 -->|No| Q2{Is it in their email?}
-    Q2 -->|Yes, and they'll connect it| Inbox[Email inbox import]
-    Q2 -->|Yes, and they'll forward it| Inbound[Inbound email]
-    Q2 -->|No| Q3{Which assets?}
-    Q3 -->|Demat + non-demat,<br/>needed right now| Fetch[CDSL OTP Fetch]
-    Q3 -->|Mutual funds,<br/>full history| Gen[CAS Generator]
-    Q1 -->|No code to write| Links[Portfolio Links]
+quadrantChart
+    title Investor effort vs data coverage
+    x-axis "Less effort for the investor" --> "More effort"
+    y-axis "Mutual funds only" --> "All asset classes"
+    quadrant-1 "Broad, but asks more"
+    quadrant-2 "Broad and easy"
+    quadrant-3 "Narrow and easy"
+    quadrant-4 "Narrow, asks more"
+    "Portfolio Links": [0.10, 0.80]
+    "Inbound email": [0.20, 0.86]
+    "PDF upload": [0.30, 0.80]
+    "Email inbox import": [0.42, 0.86]
+    "CAS Generator": [0.58, 0.20]
+    "CDSL OTP Fetch": [0.88, 0.92]
 ```
+
+Most methods sit in the top-left: broad coverage without asking much of the investor. The four file-based methods — upload, Portfolio Links, inbound email and inbox import — cover exactly the same assets, namely whatever CAS the investor provides; they are offset only so the labels stay legible. The two worth singling out are **CDSL OTP Fetch**, which asks the most but is the only one returning holdings without the investor touching a file, and **CAS Generator**, which covers mutual funds only.
 
 | Method | What the investor does | Speed | Assets covered | Credits |
 |---|---|---|---|---|
@@ -46,7 +53,7 @@ flowchart TD
   CDSL OTP Fetch is the only method that returns holdings **without** the investor handling a file, which is why it suits credit underwriting — the data comes straight from the depository and can't be substituted.
 </Note>
 
-See [Credits](/learn/credits) for the full cost table.
+See [pricing](https://casparser.in/pricing) for plans and volume tiers.
 
 ## Supported CAS types
 

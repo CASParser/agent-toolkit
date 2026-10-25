@@ -55,7 +55,6 @@
             "pages": [
               "learn/authentication",
               "learn/response-schema",
-              "learn/credits",
               "learn/error-handling"
             ]
           },
