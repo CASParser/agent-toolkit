@@ -741,6 +741,203 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v4/inbox/read:
+    post:
+      tags:
+        - Email Import
+      summary: List inbox statements
+      description: |
+        List statement emails and their attachment details in a connected mailbox.
+
+        Download files directly from their `attachment_url`. No additional
+        headers are needed. URLs expire 30 minutes after this read.
+        Anyone with a URL can download that file until it expires, so keep
+        these URLs private.
+
+        A source is one institution sending one kind of document. Each has a
+        category and a document type, listed below. Choose what to read with any
+        mix of `categories`, `document_types`, `sources` and `senders` (at least
+        one); you get everything that matches any of them. For example,
+        `document_types: ["card_statement"]` reads every card issuer, and
+        `document_types: ["consolidated_statement"]` reads CAS only.
+
+        | Category | Document type | Sources |
+        |---|---|---|
+        | `investments` | `consolidated_statement` | `cams`, `kfintech`, `cdsl`, `nsdl` |
+        | `investments` | `contract_note` | `zerodha_contract_note` |
+        | `investments` | `broker_statement` | `zerodha_statement` |
+        | `investments` | `nps_statement` | `kfintech_nps`, `protean_nps` |
+        | `credit` | `card_statement` | `hdfc_credit_card`, `sbi_card`, `icici_credit_card`, `axis_credit_card`, `idfc_first_credit_card`, `kotak_credit_card`, `rbl_credit_card`, `bobcard`, `yes_credit_card`, `indusind_credit_card`, `scapia_credit_card`, `au_credit_card`, `niyo_global_credit_card` |
+        | `banking` | `account_statement` | `hdfc_bank_account`, `sbi_bank_account`, `icici_bank_account`, `axis_bank_account`, `kotak_bank_account`, `idfc_first_bank_account`, `yes_bank_account`, `au_bank_account`, `sbm_bank_account`, `federal_bank_account` |
+        | `insurance` | `insurance_document` | `policybazaar`, `icici_lombard`, `hdfc_life` |
+        | `tax` | `tax_notice` | `income_tax` |
+        | `tax` | `tds_certificate` | `dividend_tds` |
+
+        To read from an institution that isn't listed, pass its exact addresses
+        in `senders` (up to 20 per request). A message from one of them is
+        labelled with the known source it matches, if any; otherwise `source`,
+        `category`, `document_type` and `institution` are `null`.
+
+        **Sender verification:** `sender_verified` is the email provider's DMARC
+        check of the sender's domain: `true` means it passed, `false` means it
+        failed, and `null` means no result was available.
+
+        **Paging:** at most 50 messages per call, newest first. When `truncated`
+        is true, call again with `end_date` set to the oldest `message_date` you
+        received, and skip `message_id`s you already have.
+
+        `start_date` and `end_date` are inclusive calendar dates in IST
+        (UTC+05:30). `message_date` is the date the email was received, also in IST.
+
+        **Billing:** 0.2 credits per request (charged regardless of success or number of messages found). Attachment downloads are free.
+      operationId: inboxRead
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: x-inbox-token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: The encrypted inbox token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categories:
+                  type: array
+                  items:
+                    type: string
+                    enum: [investments, credit, banking, insurance, tax]
+                  description: Read every source in these categories.
+                  example: ["credit"]
+                document_types:
+                  type: array
+                  items:
+                    type: string
+                    enum: [consolidated_statement, contract_note, broker_statement, nps_statement,
+                           card_statement, account_statement, insurance_document,
+                           tax_notice, tds_certificate]
+                  description: Read every source of these document types.
+                  example: ["card_statement"]
+                sources:
+                  type: array
+                  items:
+                    type: string
+                    enum: [cams, kfintech, cdsl, nsdl, zerodha_contract_note, zerodha_statement, kfintech_nps,
+                           protean_nps, hdfc_credit_card, sbi_card, icici_credit_card,
+                           axis_credit_card, idfc_first_credit_card, kotak_credit_card,
+                           rbl_credit_card, bobcard, yes_credit_card,
+                           indusind_credit_card, scapia_credit_card, au_credit_card,
+                           niyo_global_credit_card,
+                           hdfc_bank_account, sbi_bank_account, icici_bank_account,
+                           axis_bank_account, kotak_bank_account,
+                           idfc_first_bank_account, yes_bank_account, au_bank_account,
+                           sbm_bank_account, federal_bank_account, policybazaar,
+                           icici_lombard, hdfc_life, income_tax, dividend_tds]
+                  description: Read these sources.
+                  example: ["hdfc_credit_card", "axis_credit_card"]
+                senders:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: string
+                    format: email
+                  description: Exact sender addresses to read, for institutions not in the table above. Domains and wildcards aren't accepted.
+                  example: ["estatement@examplebank.in"]
+                start_date:
+                  type: string
+                  format: date
+                  description: First day to search (YYYY-MM-DD, inclusive, IST). Defaults to 30 days before `end_date`.
+                  example: "2026-08-01"
+                end_date:
+                  type: string
+                  format: date
+                  description: Last day to search (YYYY-MM-DD, inclusive, IST). Defaults to today in IST.
+                  example: "2026-10-31"
+                include_body:
+                  type: boolean
+                  default: false
+                  description: Return each message's body as well.
+            example:
+              document_types: ["card_statement"]
+              start_date: "2026-08-01"
+              end_date: "2026-10-31"
+      responses:
+        '200':
+          description: Messages found in the inbox
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  messages:
+                    type: array
+                    description: Newest first
+                    items:
+                      $ref: '#/components/schemas/InboxMessage'
+                  count:
+                    type: integer
+                    example: 3
+                  failures:
+                    type: integer
+                    description: Messages that could not be read. The rest are still returned.
+                    example: 0
+                  truncated:
+                    type: boolean
+                    description: |
+                      True when more messages may match than were returned. Page back with
+                      `end_date` as described above, or narrow the range if no messages came back.
+                    example: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  msg:
+                    type: string
+                    example: "Unknown sources: hdfc"
+        '401':
+          description: Token invalid or revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  msg:
+                    type: string
+                    example: "Access expired. Please reconnect."
+                  requires_reconnect:
+                    type: boolean
+                    example: true
+        '502':
+          description: The email provider could not be searched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  msg:
+                    type: string
+                    example: "Failed to read inbox. Please try again or reconnect."
+
   /v4/inbox/disconnect:
     post:
       tags:
@@ -5197,6 +5394,94 @@ components:
             - Inbound Email with `callback_url` set: 172800 (48h)
             - Inbound Email without `callback_url`: aligned with the session TTL (~30 min)
           example: 86400
+
+    InboxMessage:
+      type: object
+      description: A message returned by `/v4/inbox/read`
+      properties:
+        message_id:
+          type: string
+          description: The email provider's message ID. It stays the same across reads, so you can skip messages you already have.
+          example: "18d4a2b3c4d5e6f7"
+        message_date:
+          type: string
+          format: date
+          description: Date the email was received, in IST (UTC+05:30)
+          example: "2026-10-12"
+        sender_email:
+          type: string
+          format: email
+          description: Sender address, lowercased
+          example: "emailstatements.cards@hdfcbank.net"
+        sender_verified:
+          type: boolean
+          nullable: true
+          description: |
+            The email provider's DMARC check of the sender's domain.
+            `true`: passed. `false`: failed. `null`: no result available.
+          example: true
+        subject:
+          type: string
+          example: "Your HDFC Bank Credit Card Statement for October 2026"
+        source:
+          type: string
+          nullable: true
+          description: The source the message matched. `null` for a message from `senders` that matches no known source.
+          example: "hdfc_credit_card"
+        category:
+          type: string
+          nullable: true
+          description: The source's category. `null` when `source` is.
+          example: "credit"
+        document_type:
+          type: string
+          nullable: true
+          description: The kind of document the source sends. `null` when `source` is.
+          example: "card_statement"
+        institution:
+          type: string
+          nullable: true
+          description: The institution's name. `null` when `source` is.
+          example: "HDFC Bank"
+        attachments:
+          type: array
+          description: PDF, CSV, XLS and XLSX attachments. Other files, such as images, are left out.
+          items:
+            $ref: '#/components/schemas/InboxAttachment'
+        body:
+          type: object
+          description: Present when `include_body` is true. Gmail can return both `html` and `text`, Outlook one of them, Zoho `html` only.
+          properties:
+            html:
+              type: string
+              nullable: true
+            text:
+              type: string
+              nullable: true
+
+    InboxAttachment:
+      type: object
+      description: An attachment listed by `/v4/inbox/read`, with a direct download URL
+      properties:
+        filename:
+          type: string
+          description: Standardized filename, `{source}_{YYYYMMDD}_{id}.{ext}`, with `custom` in place of the source when there's no known source. The same attachment always gets the same name.
+          example: "hdfc_credit_card_20261012_a1b2c3d4e5f6.pdf"
+        original_filename:
+          type: string
+          description: Filename as sent
+          example: "Infinia_Statement_Oct2026.pdf"
+        content_type:
+          type: string
+          example: "application/pdf"
+        size:
+          type: integer
+          description: File size in bytes
+          example: 245000
+        attachment_url:
+          type: string
+          format: uri
+          description: Direct download URL. No headers required. Valid for 30 minutes after the read.
 
     ReceivedEmailCASFile:
       description: |
