@@ -5,6 +5,35 @@ description: Real-world applications of CAS Parser across fintech, wealth manage
 
 Used by **100+ companies** across portfolio tracking, wealth management, credit underwriting, and tax filing.
 
+## Setup
+
+Every example below uses this helper so the API call isn't repeated each time. CAS Parser is a plain REST API — there is no client library to install beyond `requests`.
+
+```python
+import requests
+
+API_KEY = "YOUR_API_KEY"          # or "sandbox-with-json-responses" to test
+BASE_URL = "https://api.casparser.in"
+HEADERS = {"x-api-key": API_KEY}
+
+
+def parse_cas(pdf_file, password):
+    """Parse a CAS PDF and return the unified JSON response."""
+    response = requests.post(
+        f"{BASE_URL}/v4/smart/parse",
+        headers=HEADERS,
+        files={"file": pdf_file},
+        data={"password": password},
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
+```
+
+<Note>
+  Functions like `calculate_allocation` or `assess_eligibility` in the examples are **your** business logic, not part of the API. Only the `requests` calls are real.
+</Note>
+
 ## Portfolio Tracking Apps
 
 ### Challenge
@@ -17,7 +46,7 @@ Let users upload their CAS PDF to import their entire portfolio history in secon
 
 ```python
 # User uploads CAS PDF
-cas_data = casparser.parse(pdf_file, password)
+cas_data = parse_cas(pdf_file, password)
 
 # Import to your database
 for folio in cas_data['mutual_funds']:
@@ -54,17 +83,25 @@ Request CAS via KFintech API, parse automatically, and generate consolidated rep
 ### Implementation
 
 ```python
-# Step 1: Request CAS generation
-casparser.generate_cas(
-    email=client.email,
-    pan=client.pan,
-    from_date="2020-01-01",
-    to_date="2024-12-31"
-)
+# Step 1: Request CAS generation. With cas_authority="cams" the PDF password
+# rule allows a PAN, so you don't need to store a separate secret.
+requests.post(
+    f"{BASE_URL}/v4/generate",
+    headers=HEADERS,
+    json={
+        "email": client.email,
+        "pan_no": client.pan,
+        "from_date": "2020-01-01",
+        "to_date": "2024-12-31",
+        "password": client.pan,
+        "cas_authority": "cams",
+    },
+    timeout=60,
+).raise_for_status()
 
 # Step 2: Client receives CAS in email, uploads to portal
 # Step 3: Parse and analyze
-cas_data = casparser.parse(pdf_file, password)
+cas_data = parse_cas(pdf_file, client.pan)
 
 # Generate asset allocation report
 allocation = calculate_allocation(cas_data)
@@ -93,12 +130,24 @@ Verify a registration number against the official register in one API call, befo
 
 ```python
 # Verify a SEBI Registered Investment Adviser (category auto-detected from the number)
-ria = casparser.verify_sebi(registration_number="INA000000888")
+ria = requests.post(
+    f"{BASE_URL}/v1/verify/sebi",
+    headers=HEADERS,
+    json={"registration_number": "INA000000888"},
+    timeout=30,
+).json()
+
 if not ria["verified"]:
     reject(f"Not an active RIA — {ria['registration_status']}")
 
 # Verify a mutual fund distributor by ARN, with AMFI adverse-list screening
-mfd = casparser.verify_mfd(arn="89762")
+mfd = requests.post(
+    f"{BASE_URL}/v1/verify/mfd",
+    headers=HEADERS,
+    json={"arn": "89762"},
+    timeout=30,
+).json()
+
 if mfd["registration_status"] in ("SUSPENDED", "TERMINATED"):
     escalate(f"ARN on AMFI {mfd['registration_status']} list")
 ```
@@ -121,7 +170,7 @@ Parse CAS to extract all buy/sell transactions, calculate FIFO/LIFO gains automa
 ### Implementation
 
 ```python
-cas_data = casparser.parse(pdf_file, password)
+cas_data = parse_cas(pdf_file, password)
 
 # Extract equity transactions
 equity_txns = []
@@ -158,14 +207,29 @@ Request CAS directly from CDSL via OTP, verify authenticity, assess creditworthi
 ### Implementation
 
 ```python
-# Step 1: Request OTP from CDSL
-session = casparser.cdsl_fetch(pan=borrower.pan, dob=borrower.dob)
+# Step 1: Request OTP from CDSL (pan, bo_id and dob are all required)
+session = requests.post(
+    f"{BASE_URL}/v4/cdsl/fetch",
+    headers=HEADERS,
+    json={"pan": borrower.pan, "bo_id": borrower.bo_id, "dob": borrower.dob},
+    timeout=50,
+).json()
 
-# Step 2: Borrower enters OTP
-cas_urls = casparser.cdsl_verify(session_id, otp)
+# Step 2: Borrower enters the OTP sent to their registered mobile
+files = requests.post(
+    f"{BASE_URL}/v4/cdsl/fetch/{session['session_id']}/verify",
+    headers=HEADERS,
+    json={"otp": otp},
+    timeout=60,
+).json()["files"]
 
-# Step 3: Parse and assess
-cas_data = casparser.parse_from_url(cas_urls['detailed'])
+# Step 3: Parse the returned URL and assess
+cas_data = requests.post(
+    f"{BASE_URL}/v4/smart/parse",
+    headers=HEADERS,
+    json={"pdf_url": files[0], "password": borrower.pan},
+    timeout=60,
+).json()
 
 # Calculate credit score factors
 total_portfolio_value = cas_data['summary']['total_value']
@@ -191,20 +255,28 @@ Parse thousands of CAS files, aggregate data, identify patterns.
 ### Implementation
 
 ```python
-# Batch processing
+import statistics
+from collections import Counter
+
 results = []
-for cas_file in cas_files:
-    data = casparser.parse(cas_file, password)
+for cas_file, password in cas_files:
+    data = parse_cas(cas_file, password)
+
+    # A CAS may hold zero demat accounts (mutual-fund-only investors),
+    # so flatten across accounts rather than indexing into the first one.
+    equities = [e for acc in data['demat_accounts'] for e in acc['equities']]
+
     results.append({
         'total_value': data['summary']['total_value'],
-        'equity_count': len(data['demat_accounts'][0]['equities']),
+        'equities': equities,
         'mf_count': sum(len(f['schemes']) for f in data['mutual_funds']),
-        'age_group': classify_age(data['investor']['name'])
     })
 
 # Aggregate insights
 avg_portfolio_value = statistics.mean(r['total_value'] for r in results)
-popular_stocks = Counter(e['isin'] for r in results for e in r['equities']).most_common(10)
+popular_stocks = Counter(
+    e['isin'] for r in results for e in r['equities']
+).most_common(10)
 ```
 
 ### Benefits
@@ -225,7 +297,7 @@ Parse CAS, analyze allocation, suggest rebalancing.
 ### Implementation
 
 ```python
-cas_data = casparser.parse(pdf_file, password)
+cas_data = parse_cas(pdf_file, password)
 
 # Current allocation
 current = {
@@ -259,7 +331,7 @@ Parse CAS to extract insurance policies and portfolio value, recommend coverage.
 ### Implementation
 
 ```python
-cas_data = casparser.parse(pdf_file, password)
+cas_data = parse_cas(pdf_file, password)
 
 # Extract existing insurance
 existing_coverage = sum(p['sum_assured'] for p in cas_data['insurance'])

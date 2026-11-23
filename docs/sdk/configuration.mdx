@@ -8,7 +8,7 @@ This page covers `@cas-parser/connect` v2.x. For the underlying APIs the widget 
 ## Authentication
 
 <Warning>
-  Never expose your raw API key to the browser. Mint a short-lived **access token** (`at_*`) on your backend via [`POST /v1/token`](/api-reference/endpoint/access-tokens) and pass that to the widget instead.
+  Never expose your raw API key to the browser. Mint a short-lived **access token** (`at_*`) on your backend via [`POST /v1/token`](/api-reference/portfolio-connect/generate-access-token) and pass that to the widget instead.
 </Warning>
 
 The widget accepts either credential — both are sent as the `x-api-key` header. At least one of `accessToken` / `apiKey` is required.

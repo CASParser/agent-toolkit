@@ -13,6 +13,35 @@ flowchart LR
     B --> C[Unified JSON<br/>Response]
 ```
 
+## Choosing how to get the CAS
+
+Parsing is the last step. Before it, you need the PDF — and there are five ways to get one. They differ in what you ask the investor to do, not in the data you end up with.
+
+<img
+  className="block dark:hidden"
+  src="/images/cas-methods-light.svg"
+  alt="Five ways to get a CAS, grouped by where the CAS is now. Investor has the file: PDF upload or Portfolio Links. CAS is in their inbox: Email inbox import or Inbound email. No CAS yet: CAS Generator, mutual funds only, which emails the CAS to the investor's inbox. Every path ends at CAS Parser, which returns unified JSON."
+/>
+<img
+  className="hidden dark:block"
+  src="/images/cas-methods-dark.svg"
+  alt="Five ways to get a CAS, grouped by where the CAS is now. Investor has the file: PDF upload or Portfolio Links. CAS is in their inbox: Email inbox import or Inbound email. No CAS yet: CAS Generator, mutual funds only, which emails the CAS to the investor's inbox. Every path ends at CAS Parser, which returns unified JSON."
+/>
+
+Start from where the CAS is now. If the investor has the file, take it in your app with PDF upload, or send them a Portfolio Link if you'd rather not build the UI. If it's in their inbox, they can connect the inbox or forward the email. If they have no CAS yet, CAS Generator has CAMS or KFintech email one to them, which puts you on the inbox path. CAS Generator covers mutual funds only; the other four return whatever the investor's CAS covers.
+
+| Method | What the investor does | Speed | Assets covered | Credits |
+|---|---|---|---|---|
+| [PDF upload](/guides/parsing) | Uploads a CAS they already hold | Instant | Whatever that CAS covers | 1.0 |
+| [CAS Generator](/guides/cas-generator) | Gets the CAS by email, then forwards or connects it | 1–2 min, then email | Mutual funds, both RTAs, 50+ yrs | 0.5 + 1.0 to parse |
+| [Email inbox import](/guides/gmail-inbox) | Grants read-only inbox access | Seconds | Any CAS already in their inbox | 0.2/pull + 1.0 to parse |
+| [Inbound email](/guides/inbound-email) | Forwards the CAS email to an address | Seconds | Any CAS they can forward | 0.2 + 1.0 to parse |
+| [Portfolio Links](/guides/portfolio-links) | Visits a branded link and uploads | Instant | Whatever that CAS covers | 0.2 per submission |
+
+<Tip>
+  **Lowest friction first.** If the investor is already in your app with the file, upload wins. If they don't have it, inbound email asks least of them — forwarding an email needs no OAuth consent.
+</Tip>
+
 ## Supported CAS types
 
 | Source | Format | Password | Coverage |
