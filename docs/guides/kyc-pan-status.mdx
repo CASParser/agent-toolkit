@@ -137,6 +137,7 @@ def check_kyc_status(pan: str) -> dict:
     response.raise_for_status()
     return response.json()
 
+
 # Basic onboarding gate
 data = check_kyc_status("ABCDE1234F")
 
@@ -168,8 +169,6 @@ else:
 |-----------|---------|
 | Successful lookup | 0.25 |
 | Failed lookup (any error) | 0 |
-
-See [pricing](https://casparser.in/pricing) for plans and volume tiers.
 
 ## Error handling
 
